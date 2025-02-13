@@ -453,7 +453,7 @@ body {
                 </div>
                 <h2>Wellness Guide</h2>
                 <p>Stay healthy and balanced with personalized wellness recommendations 🌿</p>
-                <a href="#" class="button">Start Journey</a>
+                <a href="health.php" class="button">Start Journey</a>
             </div>
             
             <div class="card">

@@ -228,7 +228,7 @@ $notes_result = mysqli_query($conn, $notes_sql);
         }
         .task-item {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-between; 
             align-items: center;
             padding: 10px;
             border: 1px solid #ddd;
