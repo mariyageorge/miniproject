@@ -215,7 +215,12 @@ $notes_result = mysqli_query($conn, $notes_sql);
 
     
         body {
-                background-color: var(--nude-100); 
+               /* background-color: var(--nude-100); */
+               background-image: url("images/todobg.jpg");
+                background-size: cover; /* Ensures the image covers the entire element */
+                background-position: center; /* Centers the image */
+                background-repeat: no-repeat; /* Prevents repetition */
+
         }
         .container {
             max-width: 800px;
