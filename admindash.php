@@ -11,16 +11,34 @@ mysqli_select_db($conn, $database_name) or die("Database not found: " . mysqli_e
 
 // Search and filtering
 $searchQuery = filter_input(INPUT_POST, 'search', FILTER_SANITIZE_STRING) ?? '';
-$whereClause = $searchQuery ? "WHERE username LIKE ? OR email LIKE ?" : "";
+$statusFilter = filter_input(INPUT_POST, 'status_filter', FILTER_SANITIZE_STRING) ?? '';
 
-// Prepare user query
+$whereClause = "WHERE 1=1"; // Always true condition for dynamic filters
+$bindTypes = "";
+$bindValues = [];
+
+if ($searchQuery) {
+    $whereClause .= " AND (username LIKE ? OR email LIKE ?)";
+    $searchParam = "%$searchQuery%";
+    $bindTypes .= "ss";
+    $bindValues[] = $searchParam;
+    $bindValues[] = $searchParam;
+}
+
+if ($statusFilter) {
+    $whereClause .= " AND status = ?";
+    $bindTypes .= "s";
+    $bindValues[] = $statusFilter;
+}
+
+// Prepare and execute user query
 $userQuery = "SELECT * FROM users $whereClause";
 $stmt = $conn->prepare($userQuery);
 
-if ($searchQuery) {
-    $searchParam = "%$searchQuery%";
-    $stmt->bind_param("ss", $searchParam, $searchParam);
+if (!empty($bindValues)) {
+    $stmt->bind_param($bindTypes, ...$bindValues);
 }
+
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -36,7 +54,7 @@ if (isset($_GET['delete'])) {
     }
 }
 
-// User count queries
+// Fetch user statistics
 $countQueries = [
     'total' => "SELECT COUNT(*) AS user_count FROM users",
     'roles' => "SELECT 
@@ -51,7 +69,11 @@ foreach ($countQueries as $key => $query) {
     $result_count = $conn->query($query);
     $userStats[$key] = $result_count->fetch_assoc();
 }
+
+$stmt->close();
+$conn->close();
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -311,6 +333,77 @@ foreach ($countQueries as $key => $query) {
     color: white;
 }
 
+/* Search & Filter Form Styling */
+.custom-input {
+    max-width: 250px;
+    padding: 8px 12px;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+}
+
+.custom-input:focus {
+    outline: none;
+    border-color: #0056b3;
+    box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.5);
+}
+
+.custom-select {
+    max-width: 150px;
+    padding: 8px;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+}
+
+.custom-select:focus {
+    border-color: #0056b3;
+    box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.5);
+}
+
+.custom-btn {
+    padding: 8px 15px;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+}
+
+.custom-btn:hover {
+    background-color: #0056b3;
+}
+.search-container {
+    max-width: 320px; /* Reduce width */
+    margin: 0 auto; /* Center it */
+    padding: 10px;
+    background-color: #8B5E3C; /* Brown theme */
+    border-radius: 8px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Reduce spacing between elements */
+}
+
+.custom-input, .custom-select {
+    flex: 1; /* Make input and select use available space */
+    padding: 6px;
+    border: 1px solid #6B4226;
+    background-color: #F5E1C0; /* Light brown */
+    color: #5A3E22;
+    border-radius: 5px;
+    font-size: 14px; /* Reduce font size slightly */
+}
+
+.custom-btn {
+    background-color: #6B4226; /* Dark brown */
+    color: white;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.custom-btn:hover {
+    background-color: #4E2C1B;
+}
 
     </style>
 </head>
@@ -398,17 +491,28 @@ foreach ($countQueries as $key => $query) {
         </div>
 
 
-        <!-- Search Form -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="POST" class="search-bar">
-                    <input type="text" name="search" class="form-control" placeholder="Search users..." value="<?php echo htmlspecialchars($searchQuery); ?>">
-                    <button type="submit">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
+<!-- Search & Filter Form -->
+<div class="card mb-4 search-container">
+    <div class="card-body">
+        <form method="POST" class="d-flex align-items-center gap-2">
+            <input type="text" name="search" class="form-control custom-input" placeholder="Search users..." value="<?php echo htmlspecialchars($searchQuery); ?>">
+
+            <!-- Filter Dropdown -->
+            <select name="status_filter" class="form-select custom-select">
+                <option value="">All Users</option>
+                <option value="active" <?php if (isset($_POST['status_filter']) && $_POST['status_filter'] == 'active') echo 'selected'; ?>>Active</option>
+                <option value="inactive" <?php if (isset($_POST['status_filter']) && $_POST['status_filter'] == 'inactive') echo 'selected'; ?>>Inactive</option>
+            </select>
+
+            <button type="submit" class="btn custom-btn">
+                <i class="fas fa-search"></i> 
+            </button>
+        </form>
+    </div>
+</div>
+
+
+
 
         <!-- User Table -->
         <div class="card">

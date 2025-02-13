@@ -42,7 +42,7 @@ if (isset($_POST['calculate_bmi'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vintage Health Tracker</title>
+    <title>Health Tracker</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -214,6 +214,32 @@ if (isset($_POST['calculate_bmi'])) {
             font-size: 1.2em;
             margin: 15px 0;
         }
+        .modal {
+        display: none; 
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        width: 300px;
+        margin: 20% auto;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .close {
+        float: right;
+        font-size: 20px;
+        cursor: pointer;
+    }
     </style>
     <script>
         let waterIntake = 0;
@@ -282,7 +308,39 @@ function togglePausePlay() {
 
     isPaused = !isPaused;
 }
+function startTimer() {
+        let duration = document.getElementById('duration').value;
+        let timeLeft = duration * 60;
+        let timerDisplay = document.getElementById('timerDisplay');
+        let startButton = document.getElementById('startButton');
+        let pausePlayButton = document.getElementById('pausePlayButton');
+        let alertSound = document.getElementById('soundAlert');
+        let modal = document.getElementById("exerciseModal");
 
+        startButton.disabled = true;
+        pausePlayButton.disabled = false;
+
+        let timer = setInterval(function () {
+            let minutes = Math.floor(timeLeft / 60);
+            let seconds = timeLeft % 60;
+            timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                timerDisplay.textContent = "00:00";
+                alertSound.play();
+                modal.style.display = "block"; // Show modal
+                startButton.disabled = false;
+                pausePlayButton.disabled = true;
+            }
+
+            timeLeft--;
+        }, 1000);
+    }
+
+    function closeModal() {
+        document.getElementById("exerciseModal").style.display = "none";
+    }
         </script>
 </head>
 <body><br><br><br>
@@ -317,21 +375,37 @@ function togglePausePlay() {
         <input type="number" id="duration" min="1" max="180"><br>
         <button onclick="startTimer()" id="startButton">Start Workout ⏳</button>
         <button onclick="togglePausePlay()" id="pausePlayButton" disabled>Pause ⏸️</button>
-        <audio id="soundAlert" src="alert.mp3.wav"></audio>
+        <audio id="soundAlert" src="images/alert.mp3.wav"></audio>
         <p id="timerDisplay">00:00</p>
     </div>
-    
-    <!-- BMI Calculator -->
-    <div class="section">
-        <h3>📊 BMI Calculator 📊</h3>
-        <form method="POST">
-            <label>Weight (kg):</label>
-            <input type="number" name="weight" required placeholder="Enter weight"><br>
-            <label>Height (cm):</label>
-            <input type="number" name="height" required placeholder="Enter height">
-            <button type="submit" name="calculate_bmi">Calculate BMI 📐</button>
-        </form>
+    <!-- Modal -->
+<div id="exerciseModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Workout Completed! 🎉</h2>
+        <p>Great job! Keep pushing towards your fitness goals. 💪</p>
     </div>
+</div>
+    <!-- BMI Calculator -->
+
+<div class="section">
+    <h3>📊 BMI Calculator 📊</h3>
+    <form method="POST">
+        <label>Weight (kg):</label>
+        <input type="number" name="weight" required placeholder="Enter weight"><br>
+        <label>Height (cm):</label>
+        <input type="number" name="height" required placeholder="Enter height">
+        <button type="submit" name="calculate_bmi">Calculate BMI 📐</button>
+    </form>
+
+    <?php if (isset($bmi)) : ?>
+        <div class="bmi-result">
+            <h4>Your BMI: <?= $bmi ?></h4>
+            <p><?= $bmi_message ?></p>
+        </div>
+    <?php endif; ?>
+</div>
+
     
     <!-- Health Articles -->
     <div class="section">
