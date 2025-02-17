@@ -9,8 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
     $password = $_POST['password'];
 
-    // Fetch user with active status
-    $sql = "SELECT * FROM users WHERE username=? AND status='active'";
+    // Fetch user details
+    $sql = "SELECT * FROM users WHERE username=?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $username);
     $stmt->execute();
@@ -18,7 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $result->fetch_assoc();
     $stmt->close();
 
-    if ($user && password_verify($password, $user['password'])) {
+    if (!$user) {
+        $errorMessage = "Username does not exist. Please register.";
+    } elseif ($user['status'] !== 'active') {
+        $errorMessage = "Account is temporarily deleted. Please contact admin.";
+    } elseif (!password_verify($password, $user['password'])) {
+        $errorMessage = "Incorrect password. Please try again.";
+    } else {
         session_start();
         $_SESSION['user_id'] = $user['user_id'];
         $_SESSION['username'] = $user['username'];
@@ -31,13 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: dashboard.php');
         }
         exit;
-    } else {
-        $errorMessage = "Invalid username, password, or account inactive!";
     }
 }
 
 mysqli_close($conn);
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
