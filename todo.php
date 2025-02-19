@@ -94,9 +94,9 @@ if (!mysqli_query($conn, $notes_sql)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_note'])) {
     $user_id = $_SESSION['user_id'];
     $content = mysqli_real_escape_string($conn, $_POST['content']);
-    $pattern_lock = mysqli_real_escape_string($conn, $_POST['pattern_lock']);
+    //$pattern_lock = mysqli_real_escape_string($conn, $_POST['pattern_lock']);
 
-    $add_note_sql = "INSERT INTO notes (user_id, content, pattern_lock) VALUES ('$user_id', '$content', '$pattern_lock')";
+    $add_note_sql = "INSERT INTO notes (user_id, content) VALUES ('$user_id', '$content')";
     if (!mysqli_query($conn, $add_note_sql)) {
         echo "Error: " . mysqli_error($conn);
     }
@@ -213,19 +213,57 @@ $notes_result = mysqli_query($conn, $notes_sql);
             color: white;
         }
 
-    
         body {
-               /* background-color: var(--nude-100); */
-               background-image: url("images/todobg.jpg");
-                background-size: cover; /* Ensures the image covers the entire element */
-                background-position: center; /* Centers the image */
-                background-repeat: no-repeat; /* Prevents repetition */
-
-        }
+    background-image: url("images/todobg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed; /* This is the key property */
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden; /* Prevent body scrolling */
+}
         .container {
             max-width: 800px;
             margin: 0 auto;
         }
+        .tab-container {
+    max-width: 800px;
+    margin: 100px auto 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-height: calc(100vh - 140px); /* Adjust based on your header height + margins */
+    overflow-y: auto; /* Enable vertical scrolling */
+    overflow-x: hidden;
+}
+
+/* Ensure the tab content areas have appropriate heights */
+.tab-content {
+    min-height: 300px;
+    height: auto;
+}
+
+/* Smooth scrollbar for modern browsers */
+.tab-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tab-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.tab-container::-webkit-scrollbar-thumb {
+    background: var(--nude-300);
+    border-radius: 10px;
+}
+
+.tab-container::-webkit-scrollbar-thumb:hover {
+    background: var(--nude-400);
+}
         .task-item {
             display: flex;
             justify-content: space-between; 
@@ -356,7 +394,7 @@ $notes_result = mysqli_query($conn, $notes_sql);
         <i class="fas fa-arrow-left"></i> 
     </a>
         </div>
-    </header><br><br>
+    </header><br>
     <div class="tab-container">
     <div class="tab-buttons">
       <button class="tab-button active" data-target="todo-section">
@@ -436,7 +474,7 @@ $notes_result = mysqli_query($conn, $notes_sql);
     <form method="POST" class="mb-4 d-flex gap-2">
         <input type="text" name="content" placeholder="Write a note..." required class="form-control">
         <!-- <input type="text" name="pattern_lock" placeholder="Pattern Lock (optional)" class="form-control"> -->
-        <button type="submit" name="add_note" class="btn btn-primary"><i class="fas fa-plus"></i> Add Note</button>
+        <button type="submit" name="add_note" class="btn btn-primary"><i class="fas fa-plus"></i></button>
     </form>
 
     <ul class="list-group">
@@ -539,6 +577,9 @@ $notes_result = mysqli_query($conn, $notes_sql);
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<footer class="text-center py-4 mt-4">
+        <p class="text-muted">&copy; 2025 LifeSync. All rights reserved.</p>
+    </footer>
 </body>
 </html>
 

@@ -1,12 +1,44 @@
 <?php
+include("connect.php");
 session_start();
+
+// Check if user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
 
 $username = $_SESSION['username'];
+
+// Ensure user_id is set
+if (!isset($_SESSION['user_id'])) {
+    die("Error: User ID is not set in session.");
+}
+
+$user_id = $_SESSION['user_id'];
+
+// Check if profile picture is already stored in session
+if (!isset($_SESSION['profile_pic'])) {
+    // Corrected SQL query
+    $query = "SELECT profile_pic FROM users WHERE user_id='$user_id'";
+    $result = mysqli_query($conn, $query);
+
+    // Check for query errors
+    if (!$result) {
+        die("Query failed: " . mysqli_error($conn));
+    }
+
+    // Fetch result
+    $row = mysqli_fetch_assoc($result);
+    
+    // Set profile picture or default avatar
+    $_SESSION['profile_pic'] = !empty($row['profile_pic']) ? $row['profile_pic'] : 'images/default-avatar.png';
+}
+
+// Assign profile picture path
+$profile_pic = $_SESSION['profile_pic'];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -364,6 +396,13 @@ body {
     color: var(--brown-hover); /* Changes color on hover */
     transform: scale(1.1); /* Slightly enlarges the icon */
 }
+.profile-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    cursor: pointer;
+}
 
 
     </style>
@@ -385,10 +424,11 @@ body {
             Welcome back, <?php echo htmlspecialchars($username); ?>!
         </div>
         <div class="profile-dropdown">
-            <i class="fas fa-user-circle profile-icon"></i>
-            <div class="dropdown-menu">
-    <a href="profile.php"><i class="fas fa-user"></i> View Profile</a>
-    <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    <img src="<?php echo $profile_pic; ?>" alt="User Profile" class="profile-icon">
+    <div class="dropdown-menu">
+        <a href="profile.php"><i class="fas fa-user"></i> View Profile</a>
+        <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
 </div>
 
         </div>

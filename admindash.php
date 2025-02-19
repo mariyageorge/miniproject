@@ -448,7 +448,7 @@ $conn->close();
                     <i class="fas fa-tachometer-alt me-2"></i> Dashboard
                 </a>
                 <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-bell me-2"></i> View Requests
+                    <i class="fas fa-bell me-2"></i> Add Articles
                 </a>
                 <a href="view_feedback.php" class="list-group-item list-group-item-action">
                     <i class="fas fa-comment me-2"></i> View Feedbacks
