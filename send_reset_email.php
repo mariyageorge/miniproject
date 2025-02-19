@@ -80,26 +80,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $mail->isHTML(true);
         $mail->Subject = "Password Reset Request - Life-Sync";
         $mail->Body = "
-            <html>
-            <body style='font-family: Arial, sans-serif;'>
-                <h2>Password Reset Request</h2>
-                <p>Hello,</p>
-                <p>We received a request to reset your password. Click the button below to reset it:</p>
-                <p style='margin: 25px 0;'>
+        <html>
+        <body style='font-family: Georgia, serif; background-color: #F5EFE6; padding: 20px; color: #4A3F35;'>
+            <div style='max-width: 600px; background-color: #FAF3E0; border: 1px solid #D2B48C; padding: 20px; border-radius: 10px; margin: auto;'>
+                <h2 style='color: #6F4E37; text-align: center;'>Password Reset Request</h2>
+                <p style='font-size: 16px;'>Hello,</p>
+                <p style='font-size: 16px;'>We received a request to reset your password. Click the button below to proceed:</p>
+                
+                <div style='text-align: center; margin: 25px 0;'>
                     <a href='$reset_link' 
                        style='background-color: #6F4E37; 
                               color: white; 
-                              padding: 10px 20px; 
+                              padding: 12px 25px; 
+                              font-size: 16px;
+                              font-weight: bold;
                               text-decoration: none; 
-                              border-radius: 5px;'>
+                              border-radius: 8px;
+                              display: inline-block;'>
                         Reset Password
                     </a>
+                </div>
+    
+                <p style='font-size: 16px;'>This link will expire in <strong>1 hour</strong>.</p>
+                <p style='font-size: 16px;'>If you did not request a password reset, please ignore this email.</p>
+                
+                <hr style='border: none; height: 1px; background-color: #D2B48C; margin: 20px 0;'>
+    
+                <p style='font-size: 14px; text-align: center;'>
+                    <strong>Life-Sync Team</strong><br>
+                    <span style='font-size: 12px; color: #6F4E37;'>Your trusted personal assistant</span>
                 </p>
-                <p>This link will expire in 1 hour.</p>
-                <p>If you didn't request this password reset, please ignore this email.</p>
-                <p>Best regards,<br>Life-Sync Team</p>
-            </body>
-            </html>";
+            </div>
+        </body>
+        </html>";
+    
         $mail->AltBody = "Click the link below to reset your password:\n\n$reset_link\n\nThis link expires in 1 hour.";
 
         if (!$mail->send()) {
