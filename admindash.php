@@ -257,7 +257,7 @@ $conn->close();
         .search-bar input {
             flex: 1;
             border-radius: 25px;
-            padding: 0.6rem 1rem;
+            padding: 0.6rem 10rem;
             border: 1px solid var(--secondary-color);
             outline: none;
             font-size: 1rem;
@@ -335,7 +335,8 @@ $conn->close();
 
 /* Search & Filter Form Styling */
 .custom-input {
-    max-width: 250px;
+    /* max-width: 250px; */
+    min-width: 800px;
     padding: 8px 12px;
     border: 2px solid #007bff;
     border-radius: 8px;
@@ -349,7 +350,8 @@ $conn->close();
 }
 
 .custom-select {
-    max-width: 150px;
+    min-width: 180px;
+    
     padding: 8px;
     border: 2px solid #007bff;
     border-radius: 8px;
@@ -374,7 +376,7 @@ $conn->close();
     max-width: 320px; /* Reduce width */
     margin: 0 auto; /* Center it */
     padding: 10px;
-    background-color: #8B5E3C; /* Brown theme */
+    background-color:rgb(233, 187, 154); /* Brown theme */
     border-radius: 8px;
     box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
     display: flex;
@@ -383,27 +385,54 @@ $conn->close();
 }
 
 .custom-input, .custom-select {
-    flex: 1; /* Make input and select use available space */
-    padding: 6px;
-    border: 1px solid #6B4226;
+    flex: 1.5; /* Give more space to the input */
+    padding: 10px;
+    
+    border: 2px solid #8B5E3C; /* More visible border */
     background-color: #F5E1C0; /* Light brown */
     color: #5A3E22;
-    border-radius: 5px;
-    font-size: 14px; /* Reduce font size slightly */
+    border-radius: 8px; /* Softer corners */
+    font-size: 16px;
+    transition: all 0.3s ease-in-out;
+}
+
+.custom-input {
+    width: 100%;
+    box-shadow: 0px 0px 5px rgba(139, 94, 60, 0.5); /* Subtle glow effect */
+}
+
+.custom-input:focus {
+    border-color: #D2691E; /* Reddish-brown for focus */
+    background-color: #FFF;
+    box-shadow: 0px 0px 10px rgba(210, 105, 30, 0.7); /* Stronger glow on focus */
 }
 
 .custom-btn {
     background-color: #6B4226; /* Dark brown */
     color: white;
-    padding: 6px 10px;
+    padding: 8px 12px; /* Slightly larger for better clicking */
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
+    transition: background-color 0.3s ease-in-out;
 }
 
 .custom-btn:hover {
-    background-color: #4E2C1B;
+    background-color: #4E2C1B; /* Even darker brown */
 }
+
+.search-container {
+    max-width: 1200px; /* Increased width for better visibility */
+    margin: 0 auto;
+    padding: 7px;
+    background-color:rgb(160, 136, 117);
+    border-radius: 10px;
+    box-shadow: 3px 3px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 
     </style>
 </head>

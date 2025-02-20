@@ -58,7 +58,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             --hover-color: #A0522D;
             --bg-color: #F5ECE5;
             --text-color: #333;
-            --success-color:rgb(135, 216, 154);
+            --success-color:rgb(100, 175, 118);
             --error-color: #dc3545;
         }
 
