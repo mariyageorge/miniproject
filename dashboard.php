@@ -442,7 +442,7 @@ body {
        
         <br><br><br><br>
         <nav class="nav-links">
-            <a href="#" class="nav-link">
+            <a href="dashboard.php" class="nav-link">
                 <i class="fas fa-home"></i>
                 <span>Dashboard</span>
             </a>
@@ -450,10 +450,10 @@ body {
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
             </a>
-            <a href="#" class="nav-link">
+            <!-- <a href="#" class="nav-link">
                 <i class="fas fa-cog"></i>
                 <span>Settings</span>
-            </a>
+            </a> -->
             <a href="feedback.php" class="nav-link">
             <i class="fas fa-envelope-open-text"></i>
                 <span>Feedback</span>
@@ -502,7 +502,7 @@ body {
                 </div>
                 <h2>Time Planner</h2>
                 <p>Plan your days effectively with smart scheduling and reminders ⏰</p>
-                <a href="#" class="button">Plan Now</a>
+                <a href="calender.php" class="button">Plan Now</a>
             </div>
         </div>
     </div>
