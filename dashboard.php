@@ -408,7 +408,6 @@ body {
     </style>
 </head>
 <body>
-    <!-- Add this right after <body> tag -->
 <header class="header">
     <div class="logo-section">
         <div class="logo-icon">
@@ -450,10 +449,34 @@ body {
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
             </a>
-            <!-- <a href="#" class="nav-link">
-                <i class="fas fa-cog"></i>
-                <span>Settings</span>
-            </a> -->
+      <a href="#" class="nav-link" onclick="showTranslateWidget()">
+    <i class="fas fa-cog"></i>
+    <span>Translate</span>
+</a>
+
+<!-- Google Translate Widget (Hidden Initially) -->
+<div id="google_translate_element" style="display: none;"></div>
+
+<script>
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+            { pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE },
+            'google_translate_element'
+        );
+    }
+
+    function showTranslateWidget() {
+        var widget = document.getElementById("google_translate_element");
+        if (widget.style.display === "none") {
+            widget.style.display = "block"; // Show the widget when the button is clicked
+        } else {
+            widget.style.display = "none"; // Hide it if clicked again
+        }
+    }
+</script>
+
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
             <a href="feedback.php" class="nav-link">
             <i class="fas fa-envelope-open-text"></i>
                 <span>Feedback</span>
