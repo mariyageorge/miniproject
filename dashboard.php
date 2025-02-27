@@ -468,9 +468,9 @@ body {
     function showTranslateWidget() {
         var widget = document.getElementById("google_translate_element");
         if (widget.style.display === "none") {
-            widget.style.display = "block"; // Show the widget when the button is clicked
+            widget.style.display = "block"; 
         } else {
-            widget.style.display = "none"; // Hide it if clicked again
+            widget.style.display = "none"; 
         }
     }
 </script>
