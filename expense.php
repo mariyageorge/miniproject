@@ -1199,14 +1199,14 @@ if (isset($_POST['delete_expense'])) {
                                 <i class="fas fa-tag"></i>
                                 <select id="category" name="category" class="input-with-icon" required>
     <!-- Add predefined categories here -->
-    <!-- <option value="Food">Food</option> -->
+    <option value="Food">Food</option>
     <option value="Transport">Transport</option>
-    <!-- <option value="Entertainment">Entertainment</option> -->
+    <option value="Entertainment">Entertainment</option>
     <option value="Healthcare">Healthcare</option>
     <option value="Other">Other</option>
 
     <!-- Existing dynamic categories from the database -->
-    <?php
+    <!-- <?php
         $cat_sql = "SELECT DISTINCT category FROM expenses WHERE user_id = ? ORDER BY category";
         $cat_stmt = mysqli_prepare($conn, $cat_sql);
         mysqli_stmt_bind_param($cat_stmt, "i", $user_id);
@@ -1215,7 +1215,7 @@ if (isset($_POST['delete_expense'])) {
         while ($cat_row = mysqli_fetch_assoc($cat_result)) {
             echo '<option value="'.$cat_row['category'].'">'.$cat_row['category'].'</option>';
         }
-    ?>
+    ?> -->
 </select>
 
                             </div>

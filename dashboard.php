@@ -369,7 +369,7 @@ body {
 
 .welcome-section {
     display: flex;
-    align-items: center; /* Aligns emoji, text, and profile icon */
+    align-items: center; 
     gap: 0.8rem;
 }
 

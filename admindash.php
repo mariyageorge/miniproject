@@ -550,7 +550,7 @@ $conn->close();
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <!-- <th>ID</th> -->
                                 <th>Username</th>
                                 <th>Email</th>
                                 <th>Role</th>
@@ -561,7 +561,7 @@ $conn->close();
                         <tbody>
                             <?php while ($row = $result->fetch_assoc()): ?>
                                 <tr>
-                                    <td><?php echo $row['user_id']; ?></td>
+                                    <!-- <td><?php echo $row['user_id']; ?></td> -->
                                     <td><?php echo htmlspecialchars($row['username']); ?></td>
                                     <td><?php echo htmlspecialchars($row['email']); ?></td>
                                     <td>
