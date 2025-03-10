@@ -16,7 +16,6 @@ $sql = "CREATE TABLE IF NOT EXISTS tasks (
     user_id INT(6) UNSIGNED,
     description VARCHAR(255) NOT NULL,
     status ENUM('incomplete', 'complete') DEFAULT 'incomplete',
-    category VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 )";
@@ -25,25 +24,38 @@ if (!mysqli_query($conn, $sql)) {
     echo "Error creating table: " . mysqli_error($conn);
 }
 
-// Add a new task
+// Add a new task with a limit of 5 per day
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_task'])) {
-    $user_id = $_SESSION['user_id']; // Assuming user_id is stored in session
-    $description = $_POST['description'];
-    $category = $_POST['category'];
+    $user_id = $_SESSION['user_id'];
+    $description = mysqli_real_escape_string($conn, $_POST['description']);
 
-    $add_sql = "INSERT INTO tasks (user_id, description, category) VALUES ('$user_id', '$description', '$category')";
-    if (!mysqli_query($conn, $add_sql)) {
-        echo "Error: " . mysqli_error($conn);
+    // Get today's date
+    $today = date('Y-m-d');
+
+    // Count tasks added by the user today
+    $task_count_query = "SELECT COUNT(*) AS task_count FROM tasks WHERE user_id='$user_id' AND DATE(created_at) = '$today'";
+    $task_count_result = mysqli_query($conn, $task_count_query);
+    $task_count_row = mysqli_fetch_assoc($task_count_result);
+    $task_count = $task_count_row['task_count'];
+    
+    if ($task_count_row['task_count'] >= 5) {
+        echo "<script>alert('You can only add 5 tasks per day.');</script>";
+    } else {
+        // Proceed with inserting a new task
+        $add_sql = "INSERT INTO tasks (user_id, description) VALUES ('$user_id', '$description')";
+        if (!mysqli_query($conn, $add_sql)) {
+            echo "<script>alert('Error: " . mysqli_error($conn) . "');</script>";
+        }
     }
 }
+
 
 // Edit an existing task
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_task'])) {
     $task_id = $_POST['task_id'];
     $description = $_POST['description'];
-    $category = $_POST['category'];
 
-    $edit_sql = "UPDATE tasks SET description='$description', category='$category' WHERE task_id='$task_id'";
+    $edit_sql = "UPDATE tasks SET description='$description' WHERE task_id='$task_id'";
     if (mysqli_query($conn, $edit_sql)) {
         echo "Task updated successfully";
     } else {
@@ -411,21 +423,14 @@ $notes_result = mysqli_query($conn, $notes_sql);
     <!-- <h1 class="mt-5 text-center">Todo List</h1> -->
     <form method="POST" class="mb-4 d-flex gap-2">
         <input type="text" name="description" placeholder="Task description" required class="form-control">
-        <select name="category" class="form-control">
-    <option value="Work">Work</option>
-    <option value="Personal">Personal</option>
-    <option value="Health">Health</option>
-    <option value="Finance">Finance</option>
-</select>
-
-        <button type="submit" name="add_task" class="btn btn-primary"><i class="fas fa-plus"></i> </button>
-    </form>
+        <button id="addTaskBtn" <?php echo ($task_count >= 5) ? 'disabled' : ''; ?>>+</button>
+        </form>
 
     <ul class="list-group">
         <?php while ($task = mysqli_fetch_assoc($tasks_result)): ?>
             <li class="list-group-item task-item <?php echo $task['status'] === 'complete' ? 'complete' : ''; ?>">
                 <div>
-                    <strong><?php echo $task['description']; ?></strong> - <span class="text-muted"><?php echo $task['category']; ?></span>
+                    <strong><?php echo $task['description']; ?></strong>
                 </div>
                 <div class="task-actions">
                     <a href="?complete_task=<?php echo $task['task_id']; ?>" class="btn btn-success btn-sm"><i class="fas fa-check"></i></a>
@@ -448,13 +453,6 @@ $notes_result = mysqli_query($conn, $notes_sql);
                             <form method="POST">
                                 <input type="hidden" name="task_id" value="<?php echo $task['task_id']; ?>">
                                 <input type="text" name="description" value="<?php echo $task['description']; ?>" required class="form-control mb-2">
-                            <select name="category" class="form-control mb-2">
-                            <option value="Work" <?php if ($task['category'] == 'Work') echo 'selected'; ?>>Work</option>
-                            <option value="Personal" <?php if ($task['category'] == 'Personal') echo 'selected'; ?>>Personal</option>
-                            <option value="Health" <?php if ($task['category'] == 'Health') echo 'selected'; ?>>Health</option>
-                            <option value="Finance" <?php if ($task['category'] == 'Finance') echo 'selected'; ?>>Finance</option>
-                        </select>
-
                                 <button type="submit" name="edit_task" class="btn btn-primary">Update Task</button>
                             </form>
                         </div>
@@ -506,7 +504,6 @@ $notes_result = mysqli_query($conn, $notes_sql);
                             <form method="POST">
                                 <input type="hidden" name="note_id" value="<?php echo $note['note_id']; ?>">
                                 <input type="text" name="content" value="<?php echo htmlspecialchars($note['content']); ?>" required class="form-control mb-2">
-                                <input type="text" name="pattern_lock" value="<?php echo htmlspecialchars($note['pattern_lock']); ?>" class="form-control mb-2" placeholder="Pattern Lock (optional)">
                                 <button type="submit" name="edit_note" class="btn btn-primary">Update Note</button>
                             </form>
                         </div>
@@ -516,12 +513,6 @@ $notes_result = mysqli_query($conn, $notes_sql);
         <?php endwhile; ?>
     </ul>
 </div></div>     
-  
-
-
-
-
-
 
 <script>
   document.querySelectorAll('.task-checkbox').forEach(checkbox => {
@@ -574,6 +565,7 @@ $notes_result = mysqli_query($conn, $notes_sql);
 
 
 </script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>

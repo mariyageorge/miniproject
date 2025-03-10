@@ -1,4 +1,12 @@
 <?php
+
+session_start();
+if (isset($_SESSION['user_id'])) {
+    header("Location: dashboard.php");
+    exit();
+}
+
+
 include 'connect.php';
 $database_name = "lifesync_db";
 mysqli_select_db($conn, $database_name) or die("Database not found: " . mysqli_error($conn));
@@ -50,6 +58,7 @@ mysqli_close($conn);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | LIFE-SYNC</title>
+    <script src="main.js" defer type="module"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -211,6 +220,52 @@ mysqli_close($conn);
             font-size: 14px;
             margin-bottom: 10px;
         }
+        .or-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 15px 0;
+}
+
+.or-divider::before,
+.or-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--nude-200);
+    margin: 0 10px;
+}
+
+.or-divider span {
+    font-size: 14px;
+    color: var(--nude-500);
+}
+
+.btn-google {
+    width: 100%;
+    background-color: white;
+    border: 2px solid var(--nude-300);
+    color: var(--brown-primary);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-google:hover {
+    background-color: var(--nude-200);
+    border-color: var(--brown-hover);
+}
+
+.btn-google i {
+    font-size: 20px;
+    color: #DB4437; /* Google Red */
+}
 </style>
 <body>
     
@@ -258,6 +313,13 @@ mysqli_close($conn);
         <div class="links">
             <a href="forgotpassword.php">Forgot password?</a><br>
             <a href="register.php">Don't have an account? Register</a>
+            <div class="or-divider">
+    <span>OR</span>
+</div>
+
+<button id="googleSignInBtn" class="btn-google">
+    <i class="fab fa-google"></i> Sign in with Google
+</button>
         </div>
     </div>
 

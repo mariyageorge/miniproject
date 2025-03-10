@@ -34,13 +34,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Email validation
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Please enter a valid email address';
+    if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address";
     } else {
-        // $checkEmailQuery = "SELECT * FROM users WHERE email = '$email'";
-        // $result = mysqli_query($conn, $checkEmailQuery);
-        
+        $query = "SELECT * FROM users WHERE email = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        mysqli_stmt_bind_param($stmt, "s", $value);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+    
+        if (mysqli_num_rows($result) > 0) {
+            $error = "Email already registered";
+        }
     }
+    
 
     // Password validation
     if (strlen($password) < 8) {
@@ -393,6 +400,7 @@ mysqli_close($conn);
     background-color: --nude-500: #B08F78;
 }
 
+
     </style>
 </head>
 <body>
@@ -469,7 +477,9 @@ mysqli_close($conn);
     <div class="login-link">
         Already have an account? <a href="login.php">Login here</a>
     </div>
+ 
 </div>
+
 
     <!-- OTP Verification Modal -->
     <div id="otpModal" class="modal">
@@ -575,7 +585,31 @@ mysqli_close($conn);
         });
     });
 });
-    
+$(document).ready(function () {
+    $("#emailInput").on("input", function () {
+        var email = $(this).val();
+
+        $.ajax({
+            url: "register.php", // The same file handling registration
+            method: "POST",
+            data: { email_check: email },
+            dataType: "json",
+            success: function (response) {
+                if (!response.success) {
+                    $("#emailError").text(response.message).show();
+                    $("#verifyEmailBtn").prop("disabled", true); // Disable Verify Button
+                } else {
+                    $("#emailError").hide();
+                    $("#verifyEmailBtn").prop("disabled", false); // Enable Verify Button
+                }
+            },
+            error: function (xhr, status, error) {
+                console.log("AJAX Error: " + error);
+            }
+        });
+    });
+});
+
     // Live validation for username
     $("input[name='username']").on("input", function() {
         validateField("username", $(this).val());

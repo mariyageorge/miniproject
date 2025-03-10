@@ -24,10 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['field']) && isset($_P
         if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
             $error = "Please enter a valid email address";
         } else {
-            $query = "SELECT * FROM users WHERE email = '$value'";
-            $result = mysqli_query($conn, $query);
-           
+            $query = "SELECT * FROM users WHERE email = ?";
+            $stmt = mysqli_prepare($conn, $query);
+            mysqli_stmt_bind_param($stmt, "s", $value);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+        
+            if (mysqli_num_rows($result) > 0) {
+                $error = "Email already registered";
+            }
         }
+        
     } elseif ($field == "password") {
         if (strlen($value) < 8) {
             $error = "Password must be at least 8 characters long";
