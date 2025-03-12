@@ -1,19 +1,14 @@
 <?php
-
 session_start();
-if (isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
-    exit();
-}
-
-
 include 'connect.php';
+
 $database_name = "lifesync_db";
 mysqli_select_db($conn, $database_name) or die("Database not found: " . mysqli_error($conn));
 
 $errorMessage = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// ✅ Handle Traditional Username & Password Login
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username']) && isset($_POST['password'])) {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
     $password = $_POST['password'];
 
@@ -33,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!password_verify($password, $user['password'])) {
         $errorMessage = "Incorrect password. Please try again.";
     } else {
-        session_start();
+        // ✅ Login successful, set session
         $_SESSION['user_id'] = $user['user_id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['role'] = $user['role'];
@@ -44,12 +39,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             header('Location: dashboard.php');
         }
-        exit;
+        exit();
     }
+}
+
+// ✅ Handle Google Sign-In
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['google_signin'])) {
+    header('Content-Type: application/json');
+
+    try {
+        // Get data from Google sign-in
+        $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+        $username = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
+        $google_id = filter_var($_POST['google_id'], FILTER_SANITIZE_STRING);
+
+        // Check if user already exists
+        $stmt = $conn->prepare("SELECT user_id, username, role, status FROM users WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
+        $stmt->close();
+
+        if ($user) {
+            // ✅ User exists, log them in
+            if (strtolower($user['status']) !== 'active') {
+                echo json_encode(["status" => "error", "message" => "Your account is inactive. Please contact the administrator."]);
+                exit();
+            }
+
+            // Set session variables
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'] ?? 'user'; // Default to 'user' if role is not set
+
+            // Role-based redirection
+            $redirect_page = ($user['role'] === 'admin') ? 'admindash.php' : 'dashboard.php';
+
+            echo json_encode([
+                "status" => "success",
+                "message" => "Logged in successfully",
+                "is_new_user" => false,
+                "redirect" => $redirect_page
+            ]);
+        } else {
+            // ❗ New user, register them
+            $random_password = bin2hex(random_bytes(16)); // Secure random password
+            $hashed_password = password_hash($random_password, PASSWORD_BCRYPT);
+            $default_role = 'user';
+            $status = 'active';
+
+            $stmt = $conn->prepare("INSERT INTO users (username, password, email, google_id, role, status) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("ssssss", $username, $hashed_password, $email, $google_id, $default_role, $status);
+
+            if ($stmt->execute()) {
+                $user_id = $stmt->insert_id;
+                $_SESSION['user_id'] = $user_id;
+                $_SESSION['username'] = $username;
+                $_SESSION['role'] = $default_role;
+
+                echo json_encode([
+                    "status" => "success",
+                    "message" => "Account created successfully",
+                    "is_new_user" => true,
+                    "redirect" => "dashboard.php"
+                ]);
+            } else {
+                echo json_encode(["status" => "error", "message" => "Error creating account: " . $stmt->error]);
+            }
+
+            $stmt->close();
+        }
+    } catch (Exception $e) {
+        echo json_encode(["status" => "error", "message" => "Error: " . $e->getMessage()]);
+    }
+    exit();
 }
 
 mysqli_close($conn);
 ?>
+
 
 
 <!DOCTYPE html>

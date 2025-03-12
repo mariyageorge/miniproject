@@ -580,7 +580,7 @@ mysqli_close($conn);
             },
             error: function(xhr, status, error) {
                 console.log("AJAX Error: " + error);
-                alert("An unexpected error occurred.");
+               // alert("An unexpected error occurred.");
             }
         });
     });

@@ -37,6 +37,18 @@ if (!isset($_SESSION['profile_pic'])) {
 
 // Assign profile picture path
 $profile_pic = $_SESSION['profile_pic'];
+$notifQuery = "SELECT COUNT(*) AS notif_count FROM notifications WHERE user_id = ?";
+$stmt = $conn->prepare($notifQuery);
+
+if ($stmt) {
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $notifData = $result->fetch_assoc();
+    $notif_count = $notifData['notif_count'];
+} else {
+    $notif_count = 0; // Default to 0 if there's an error
+}
 ?>
 
 <!DOCTYPE html>
@@ -404,6 +416,13 @@ body {
     cursor: pointer;
 }
 
+.notification-badge {
+    background-color: red;
+    color: white;
+    font-size: 9px;
+    padding: 5px 8px;
+    border-radius: 55%;
+}
 
     </style>
 </head>
@@ -445,9 +464,17 @@ body {
                 <i class="fas fa-home"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="#" class="nav-link">
+            <a href="notification.php" class="nav-link">
                 <i class="fas fa-bell"></i>
-                <span>Notifications</span>
+                <span>Notifications 
+                <?php if ($notif_count > 0): ?>
+    <span id="notificationCount" class="notification-badge">
+        <?php echo $notif_count; ?>
+    </span>
+<?php endif; ?>
+
+<span>
+
             </a>
       <a href="#" class="nav-link" onclick="showTranslateWidget()">
     <i class="fas fa-cog"></i>
@@ -544,6 +571,35 @@ body {
             }
         });
     });
+</script>
+<script>
+function fetchNotifications() {
+    fetch('notification.php')
+        .then(response => response.json())
+        .then(data => {
+            let notificationList = document.getElementById("notificationList");
+            let notificationCount = document.getElementById("notificationCount");
+
+            notificationList.innerHTML = "";
+            if (data.length > 0) {
+                notificationCount.textContent = data.length;
+                notificationCount.style.display = "inline";
+                
+                data.forEach(notification => {
+                    let listItem = document.createElement("li");
+                    listItem.textContent = notification.message + " - " + notification.created_at;
+                    notificationList.appendChild(listItem);
+                });
+            } else {
+                notificationCount.style.display = "none";
+            }
+        })
+        .catch(error => console.error("Error fetching notifications:", error));
+}
+
+// Fetch notifications every 5 seconds
+setInterval(fetchNotifications, 5000);
+fetchNotifications(); // Initial load
 </script>
 
 </body>

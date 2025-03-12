@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyDsEXAOHEhdNEytfFHKP33U2xnoKfWui0g",
     authDomain: "signup-c33ba.firebaseapp.com",
@@ -22,27 +23,28 @@ googleLogin.addEventListener("click", function () {
     signInWithPopup(auth, provider)
         .then((result) => {
             const user = result.user;
-            const userEmail = user.email;
+            console.log("✅ Google Sign-In Successful:", user);
 
-            // Send email to backend for authentication
-            fetch("google_login.php", {
+            // Send user details to backend
+            fetch("login.php", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: "email=" + encodeURIComponent(userEmail)
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `google_signin=true&email=${encodeURIComponent(user.email)}&name=${encodeURIComponent(user.displayName)}&google_id=${encodeURIComponent(user.uid)}`
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    window.location.href = "dashboard.php"; // Redirect after login
+                console.log("📨 Backend Response:", data);
+                if (data.status === "success") {
+                    sessionStorage.setItem("username", data.username);
+                    window.location.href = data.redirect; // Redirect to the dashboard
                 } else {
-                    alert("Login failed: " + data.message);
+                    alert("🚨 Login failed: " + data.message);
                 }
             })
-            .catch(error => console.error("Error:", error));
+            .catch(error => console.error("❌ Error during login:", error));
         })
         .catch((error) => {
-            console.log("Google Login Error:", error);
+            console.error("❌ Google Login Error:", error);
+            alert("Google Sign-In failed: " + error.message);
         });
 });

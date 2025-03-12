@@ -186,6 +186,67 @@ while ($row = $result->fetch_assoc()) {
             margin: 0;
             font-size: 18px;
         }
+        
+        .event-form {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 2fr 1fr;
+            gap: 10px;
+        }
+        
+        .event-form input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .event-form button {
+            background-color: #8b4513;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .event-form button:hover {
+            background-color: #6d3611;
+        }
+        
+        .notification-btn {
+            background-color: #8b4513;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .notification-btn:hover {
+            background-color: #6d3611;
+        }
+        
+        .status-message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
     </style>
 </head>
 <body><br><br><br>
@@ -215,17 +276,33 @@ while ($row = $result->fetch_assoc()) {
                     <!-- Calendar days will be populated here -->
                 </tbody>
             </table>
+            
+            <div style="margin-top: 20px; text-align: right;">
+                <a href="notification.php" class="notification-btn">
+                    <i class="fas fa-bell"></i> View Notifications
+                </a>
+            </div>
         </div>
 
         <!-- Sidebar Section -->
         <div class="sidebar">
+            <?php if (isset($success_message)): ?>
+                <div class="status-message success">
+                    <?php echo $success_message; ?>
+                </div>
+            <?php endif; ?>
             
+            <?php if (isset($error_message)): ?>
+                <div class="status-message error">
+                    <?php echo $error_message; ?>
+                </div>
+            <?php endif; ?>
 
             <h3>Upcoming Reminders</h3>
             <ul class="reminders-list" id="remindersList">
                 <?php foreach ($events as $event): ?>
                     <li>
-                        <span><?php echo htmlspecialchars($event['event_title']); ?> - <?php echo $event['event_date']; ?> <?php echo $event['event_time']; ?></span>
+                        <span><?php echo htmlspecialchars($event['event_title']); ?> - <?php echo date('M d, Y', strtotime($event['event_date'])); ?> at <?php echo date('h:i A', strtotime($event['event_time'])); ?></span>
                         <div>
                             <form method="POST" style="display:inline;">
                                 <input type="hidden" name="event_id" value="<?php echo $event['event_id']; ?>">
@@ -234,12 +311,18 @@ while ($row = $result->fetch_assoc()) {
                         </div>
                     </li>
                 <?php endforeach; ?>
+                
+                <?php if (empty($events)): ?>
+                    <li><span>No upcoming events. Add one below!</span></li>
+                <?php endif; ?>
             </ul>
-            <form method="POST">
+            
+            <h3>Add New Event</h3>
+            <form method="POST" class="event-form">
                 <input type="date" name="event_date" required>
                 <input type="time" name="event_time" required>
                 <input type="text" name="event_title" placeholder="Event Title" required>
-                <button type="submit" name="add_event">Add Reminder</button>
+                <button type="submit" name="add_event">Add Event</button>
             </form>
         </div>
     </div>
@@ -287,6 +370,16 @@ while ($row = $result->fetch_assoc()) {
             currentDate.setMonth(currentDate.getMonth() + 1);
             renderCalendar();
         });
+
+        // Auto-hide status messages after 3 seconds
+        const statusMessages = document.querySelectorAll('.status-message');
+        if (statusMessages.length > 0) {
+            setTimeout(() => {
+                statusMessages.forEach(message => {
+                    message.style.display = 'none';
+                });
+            }, 3000);
+        }
 
         renderCalendar();
     </script>
