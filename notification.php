@@ -30,6 +30,52 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 $conn->query($createTableQuery) or die("Error creating notifications table: " . $conn->error);
 
+// AJAX request handling
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    
+    // Handle mark as read requests
+    if (isset($_POST['mark_read']) && isset($_POST['notification_id'])) {
+        $notification_id = intval($_POST['notification_id']);
+        
+        $update_sql = "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?";
+        $update_stmt = $conn->prepare($update_sql);
+        
+        if ($update_stmt) {
+            $update_stmt->bind_param("ii", $notification_id, $user_id);
+            if ($update_stmt->execute()) {
+                echo json_encode(['success' => true]);
+                exit;
+            }
+        }
+        
+        echo json_encode(['success' => false, 'error' => 'Failed to update notification']);
+        exit;
+    }
+    
+    // Handle delete requests
+    if (isset($_POST['delete']) && isset($_POST['notification_id'])) {
+        $notification_id = intval($_POST['notification_id']);
+        
+        $delete_sql = "DELETE FROM notifications WHERE id = ? AND user_id = ?";
+        $delete_stmt = $conn->prepare($delete_sql);
+        
+        if ($delete_stmt) {
+            $delete_stmt->bind_param("ii", $notification_id, $user_id);
+            if ($delete_stmt->execute()) {
+                echo json_encode(['success' => true]);
+                exit;
+            }
+        }
+        
+        echo json_encode(['success' => false, 'error' => 'Failed to delete notification']);
+        exit;
+    }
+    
+    echo json_encode(['success' => false, 'error' => 'Invalid request']);
+    exit;
+}
+
 // Update: Fetch events in the next 1 hour (was 30 minutes)
 $current_time = date('Y-m-d H:i:s');
 $one_hour_later = date('Y-m-d H:i:s', strtotime('+1 hour'));
@@ -105,45 +151,6 @@ if ($notif_stmt) {
 
 // Convert notifications to JSON for JavaScript
 $notifications_json = json_encode($all_notifications);
-
-// Handle AJAX mark as read requests
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_read']) && isset($_POST['notification_id'])) {
-    $notification_id = intval($_POST['notification_id']);
-    
-    $update_sql = "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?";
-    $update_stmt = $conn->prepare($update_sql);
-    
-    if ($update_stmt) {
-        $update_stmt->bind_param("ii", $notification_id, $user_id);
-        if ($update_stmt->execute()) {
-            echo json_encode(['success' => true]);
-            exit;
-        }
-    }
-    
-    echo json_encode(['success' => false, 'error' => 'Failed to update notification']);
-    exit;
-}
-
-// Handle AJAX delete requests
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_POST['notification_id'])) {
-    $notification_id = intval($_POST['notification_id']);
-    
-    $delete_sql = "DELETE FROM notifications WHERE id = ? AND user_id = ?";
-    $delete_stmt = $conn->prepare($delete_sql);
-    
-    if ($delete_stmt) {
-        $delete_stmt->bind_param("ii", $notification_id, $user_id);
-        if ($delete_stmt->execute()) {
-            echo json_encode(['success' => true]);
-            exit;
-        }
-    }
-    
-    echo json_encode(['success' => false, 'error' => 'Failed to delete notification']);
-    exit;
-}
-
 ?>
 
 <!DOCTYPE html>
@@ -177,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_
             border-radius: 5px;
             position: relative;
             transition: all 0.3s ease;
+            overflow: hidden;
         }
         .notification:hover {
             transform: translateY(-2px);
@@ -294,6 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_
             background: #ffe8e8;
             border-left: 5px solid #dc3545;
         }
+        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.8; }
@@ -378,17 +387,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_
         </div>
     </div>
 
-    <!-- Audio element for event alert -->
-    <!-- <audio id="alertSound" preload="auto">
-        <source src="images/alert.mp3.wav" type="audio/wav">
-        Your browser does not support the audio element.
-    </audio> -->
+
 
     <script>
         // Store notifications data
         const notifications = <?php echo $notifications_json; ?>;
-       // const alertSound = document.getElementById('alertSound');
-       // const playedAlerts = new Set(); // Keep track of alerts already played
+        // const alertSound = document.getElementById('alertSound');
+        // const playedAlerts = new Set(); // Keep track of alerts already played
         
         // Function to update timers
         function updateTimers() {
@@ -441,24 +446,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_
                         markReadBtn.textContent = 'Event started';
                     }
                     
-                    // Play sound if not already played for this notification
-                    // if (!playedAlerts.has(notificationId)) {
-                    //     playAlertSound();
-                    //     playedAlerts.add(notificationId);
-                    }
                 }
             });
         }
  
-        // // Function to play alert sound
-        // function playAlertSound() {
-        //     alertSound.currentTime = 0; // Reset to start
-        //     alertSound.play().catch(e => {
-        //         console.warn('Audio playback was prevented:', e);
-        //         // Most browsers require user interaction before playing audio
-        //         console.log('Note: Audio playback may require user interaction first');
-        //     });
-        // }
+
         
         // Mark notification as read
         document.querySelectorAll('.mark-read-btn').forEach(btn => {
@@ -468,12 +460,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_
                 const notification = this.closest('.notification');
                 
                 // Send AJAX request to mark as read
-                fetch('mark_notification_read.php', {
+                fetch('notification.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: 'notification_id=' + notificationId
+                    body: 'mark_read=1&notification_id=' + notificationId
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -489,42 +481,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_
             });
         });
         
-        // Delete notification
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const notificationId = this.dataset.id;
-                const notification = this.closest('.notification');
+// Updated Delete notification functionality
+document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const notificationId = this.dataset.id;
+        const notification = this.closest('.notification');
+        
+        console.log('Deleting notification ID:', notificationId); // Debug
+        
+        // Send AJAX request to delete
+        fetch('notification.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'delete=1&notification_id=' + notificationId
+        })
+        .then(response => {
+            console.log('Response status:', response.status); // Debug
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data); // Debug
+            
+            if (data.success) {
+                // Immediately remove the notification from the DOM
+                notification.style.opacity = '0';
+                notification.style.height = '0';
+                notification.style.margin = '0';
+                notification.style.padding = '0';
+                notification.style.overflow = 'hidden';
                 
-                // Send AJAX request to delete
-                fetch('delete_notification.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: 'notification_id=' + notificationId
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        notification.remove();
-                        
-                        // Update notification count
-                        updateNotificationCount();
-                        
-                        // Show empty state if no notifications left
-                        const remainingNotifications = document.querySelectorAll('.notification');
-                        if (remainingNotifications.length === 0) {
-                            const emptyState = document.createElement('div');
-                            emptyState.className = 'empty-state';
-                            emptyState.innerHTML = '<p>You have no notifications at this time.</p>';
-                            document.getElementById('notificationContainer').appendChild(emptyState);
-                        }
+                // Complete removal after animation
+                setTimeout(() => {
+                    notification.remove();
+                    
+                    // Update notification count
+                    updateNotificationCount();
+                    
+                    // Show empty state if no notifications left
+                    const remainingNotifications = document.querySelectorAll('.notification');
+                    if (remainingNotifications.length === 0) {
+                        const emptyState = document.createElement('div');
+                        emptyState.className = 'empty-state';
+                        emptyState.innerHTML = '<p>You have no notifications at this time.</p>';
+                        document.getElementById('notificationContainer').appendChild(emptyState);
                     }
-                })
-                .catch(error => console.error('Error:', error));
-            });
+                }, 300);
+            } else {
+                console.error('Error from server:', data.error || 'Unknown error');
+                alert('Could not delete notification. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Network or parsing error:', error);
+            alert('An error occurred while trying to delete the notification.');
         });
+    });
+});
         
         // Update notification count
         function updateNotificationCount() {

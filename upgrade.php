@@ -193,7 +193,7 @@ if (!isset($_SESSION['username'])) {
             <h2>Premium Plan</h2>
             <p class="price">Rs 199 / month</p>
             <ul>
-                <li><i class="fas fa-check-circle"></i> No Ads</li>
+                <li><i class="fas fa-check-circle"></i> Unlimited Todos</li>
                 <li><i class="fas fa-check-circle"></i> Access to Exclusive Content</li>
                 <li><i class="fas fa-check-circle"></i> Priority Support</li>
                 <li><i class="fas fa-check-circle"></i> Advanced Health & Task Features</li>
