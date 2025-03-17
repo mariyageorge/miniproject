@@ -12,6 +12,7 @@ mysqli_select_db($conn, $database_name) or die("Database not found: " . mysqli_e
 // Search and filtering
 $searchQuery = filter_input(INPUT_POST, 'search', FILTER_SANITIZE_STRING) ?? '';
 $statusFilter = filter_input(INPUT_POST, 'status_filter', FILTER_SANITIZE_STRING) ?? '';
+$roleFilter = filter_input(INPUT_POST, 'role_filter', FILTER_SANITIZE_STRING) ?? '';
 
 $whereClause = "WHERE 1=1"; // Always true condition for dynamic filters
 $bindTypes = "";
@@ -29,6 +30,12 @@ if ($statusFilter) {
     $whereClause .= " AND status = ?";
     $bindTypes .= "s";
     $bindValues[] = $statusFilter;
+}
+
+if ($roleFilter) {
+    $whereClause .= " AND role = ?";
+    $bindTypes .= "s";
+    $bindValues[] = $roleFilter;
 }
 
 // Prepare and execute user query
@@ -80,18 +87,26 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>LifeSync Admin Dashboard</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #6F4E37;
-            --secondary-color: #8B4513;
-            --accent-color: #D2691E;
-            --bg-color: #F4ECD8;
-            --card-bg: #F5DEB3;
-            --text-primary: #3E2723;
-            --text-secondary: #5D4037;
+            --primary-color: #5D4037;
+            --primary-light: #8D6E63;
+            --primary-dark: #3E2723;
+            --secondary-color: #795548;
+            --accent-color: #FF9800;
+            --bg-color: #F5F5F5;
+            --card-bg: #FFFFFF;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --border-color: #E0E0E0;
+            --success-color: #4CAF50;
+            --danger-color: #F44336;
+            --warning-color: #FFC107;
+            --info-color: #2196F3;
         }
 
         body {
@@ -99,13 +114,17 @@ $conn->close();
             background-color: var(--bg-color);
             margin: 0;
             padding: 0;
+            color: var(--text-primary);
         }
 
         .main-header {
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background-color: var(--primary-color);
+            color: white;
             padding: 1rem 0;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .header-container {
@@ -124,26 +143,20 @@ $conn->close();
         .logo-icon {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: linear-gradient(135deg, var(--accent-color), #FF5722);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 20px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
         }
-        @keyframes shine {
-            0% {
-                transform: translate(-100%, -100%) rotate(45deg);
-            }
-            100% {
-                transform: translate(200%, 200%) rotate(45deg);
-            }
-        }
+
         .logo-text {
             font-size: 24px;
             font-weight: 700;
-            color: var(--primary-color);
+            color: white;
             margin: 0;
         }
 
@@ -151,6 +164,24 @@ $conn->close();
             display: flex;
             gap: 15px;
             align-items: center;
+        }
+
+        .admin-welcome {
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 500;
+        }
+
+        .btn-logout {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: white;
+            color: white;
         }
 
         .role-badge {
@@ -164,59 +195,96 @@ $conn->close();
         }
 
         .role-badge.admin {
-            background-color: #dc3545;
+            background-color: var(--danger-color);
             color: white;
         }
 
         .role-badge.premium {
-            background-color: #ffc107;
-            color: #000;
+            background-color: var(--warning-color);
+            color: var(--text-primary);
         }
 
         .role-badge.user {
-            background-color: #0dcaf0;
+            background-color: var(--info-color);
             color: white;
-        }
-
-        .dropdown-menu {
-            background-color: var(--card-bg);
         }
 
         .hamburger {
-            background-color: var(--primary-color);
+            background-color: rgba(255, 255, 255, 0.2);
             border: none;
             border-radius: 4px;
             color: white;
-            padding: 5px;
+            padding: 8px 12px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .hamburger:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .dashboard-container {
+            padding: 2rem 0;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-light);
         }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 2rem;
         }
 
         .stats-card {
             background-color: var(--card-bg);
             border-radius: 10px;
-            padding: 20px;
+            padding: 1.5rem;
             display: flex;
             align-items: center;
             gap: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
+            border-left: 5px solid transparent;
+        }
+
+        .stats-card:nth-child(1) {
+            border-left-color: var(--info-color);
+        }
+
+        .stats-card:nth-child(2) {
+            border-left-color: var(--danger-color);
+        }
+
+        .stats-card:nth-child(3) {
+            border-left-color: var(--warning-color);
+        }
+
+        .stats-card:nth-child(4) {
+            border-left-color: var(--success-color);
         }
 
         .stats-card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
 
         .stats-card-icon {
-            font-size: 3rem;
-            opacity: 0.7;
+            font-size: 2.5rem;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.05);
         }
 
         .stats-card-content {
@@ -224,216 +292,266 @@ $conn->close();
         }
 
         .stats-card-number {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: bold;
             margin-bottom: 5px;
+            color: var(--primary-dark);
         }
 
         .stats-card-title {
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .table-hover tbody tr:hover {
-            background-color: rgba(255,255,255,0.2);
-            transition: background-color 0.3s ease;
+        .search-filters-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .btn-action {
-            margin: 0 5px;
+        .filter-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        .filter-form .form-group {
+            margin-bottom: 0;
+        }
+
+        .filter-form label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .filter-input {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 15px;
+            width: 100%;
             transition: all 0.3s ease;
         }
 
-        .btn-action:hover {
-            transform: scale(1.1);
-        }
-
-        .search-bar {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .search-bar input {
-            flex: 1;
-            border-radius: 25px;
-            padding: 0.6rem 10rem;
-            border: 1px solid var(--secondary-color);
-            outline: none;
-            font-size: 1rem;
-            transition: border 0.3s ease;
-        }
-
-        .search-bar input:focus {
+        .filter-input:focus {
             border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(93, 64, 55, 0.2);
+            outline: none;
         }
 
-        .search-bar button {
-            border-radius: 25px;
-            padding: 0.6rem 1.2rem;
+        .filter-btn {
             background-color: var(--primary-color);
-            border: none;
             color: white;
-            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            height: 100%;
+            min-height: 45px;
         }
 
-        .search-bar button:hover {
-            background-color: var(--secondary-color);
+        .filter-btn:hover {
+            background-color: var(--primary-dark);
         }
-        /* Offcanvas Menu Styling */
-.offcanvas {
-    background-color: var(--bg-color);
-}
 
-.offcanvas-header {
-    background-color: var(--primary-color);
-    color: white;
-    border-bottom: 1px solid var(--accent-color);
-}
+        .users-table-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
 
-.offcanvas-title {
-    font-weight: bold;
-}
+        .table-responsive {
+            overflow-x: auto;
+        }
 
-.btn-close {
-    filter: invert(1);
-}
+        .users-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
 
-.list-group-item {
-    background-color: var(--card-bg);
-    color: var(--text-primary);
-    border: none;
-    font-weight: 500;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-}
+        .users-table th {
+            background-color: rgba(93, 64, 55, 0.05);
+            color: var(--primary-dark);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+        }
 
-.list-group-item i {
-    color: var(--primary-color);
-}
+        .users-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
 
-.list-group-item:hover {
-    background-color: var(--primary-color);
-    color: white;
-    transform: translateX(5px);
-}
+        .users-table tbody tr:hover {
+            background-color: rgba(93, 64, 55, 0.03);
+        }
 
-.list-group-item:hover i {
-    color: white;
-}
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
 
-.list-group-item.active {
-    background-color: var(--primary-color);
-    color: white;
-    font-weight: bold;
-}
+        .btn-table-action {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: none;
+            transition: all 0.3s ease;
+        }
 
-.list-group-item.active i {
-    color: white;
-}
+        .btn-edit {
+            background-color: rgba(33, 150, 243, 0.1);
+            color: var(--info-color);
+        }
 
-/* Search & Filter Form Styling */
-.custom-input {
-    /* max-width: 250px; */
-    min-width: 800px;
-    padding: 8px 12px;
-    border: 2px solid #007bff;
-    border-radius: 8px;
-    transition: all 0.3s ease-in-out;
-}
+        .btn-edit:hover {
+            background-color: var(--info-color);
+            color: white;
+        }
 
-.custom-input:focus {
-    outline: none;
-    border-color: #0056b3;
-    box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.5);
-}
+        .btn-delete {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: var(--danger-color);
+        }
 
-.custom-select {
-    min-width: 180px;
-    
-    padding: 8px;
-    border: 2px solid #007bff;
-    border-radius: 8px;
-    transition: all 0.3s ease-in-out;
-}
+        .btn-delete:hover {
+            background-color: var(--danger-color);
+            color: white;
+        }
 
-.custom-select:focus {
-    border-color: #0056b3;
-    box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.5);
-}
+        .badge {
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
 
-.custom-btn {
-    padding: 8px 15px;
-    border-radius: 8px;
-    transition: background-color 0.3s ease;
-}
+        .badge-active {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(76, 175, 80, 0.2);
+        }
 
-.custom-btn:hover {
-    background-color: #0056b3;
-}
-.search-container {
-    max-width: 320px; /* Reduce width */
-    margin: 0 auto; /* Center it */
-    padding: 10px;
-    background-color:rgb(233, 187, 154); /* Brown theme */
-    border-radius: 8px;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
-    display: flex;
-    align-items: center;
-    gap: 5px; /* Reduce spacing between elements */
-}
+        .badge-inactive {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(244, 67, 54, 0.2);
+        }
 
-.custom-input, .custom-select {
-    flex: 1.5; /* Give more space to the input */
-    padding: 10px;
-    
-    border: 2px solid #8B5E3C; /* More visible border */
-    background-color: #F5E1C0; /* Light brown */
-    color: #5A3E22;
-    border-radius: 8px; /* Softer corners */
-    font-size: 16px;
-    transition: all 0.3s ease-in-out;
-}
+        .offcanvas {
+            background-color: var(--primary-dark);
+            color: white;
+            width: 280px;
+        }
 
-.custom-input {
-    width: 100%;
-    box-shadow: 0px 0px 5px rgba(139, 94, 60, 0.5); /* Subtle glow effect */
-}
+        .offcanvas-header {
+            background-color: var(--primary-color);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+        }
 
-.custom-input:focus {
-    border-color: #D2691E; /* Reddish-brown for focus */
-    background-color: #FFF;
-    box-shadow: 0px 0px 10px rgba(210, 105, 30, 0.7); /* Stronger glow on focus */
-}
+        .offcanvas-title {
+            font-weight: 600;
+            color: white;
+        }
 
-.custom-btn {
-    background-color: #6B4226; /* Dark brown */
-    color: white;
-    padding: 8px 12px; /* Slightly larger for better clicking */
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease-in-out;
-}
+        .btn-close {
+            filter: invert(1) brightness(5);
+        }
 
-.custom-btn:hover {
-    background-color: #4E2C1B; /* Even darker brown */
-}
+        .offcanvas-body {
+            padding: 1.5rem 0;
+        }
 
-.search-container {
-    max-width: 1200px; /* Increased width for better visibility */
-    margin: 0 auto;
-    padding: 7px;
-    background-color:rgb(160, 136, 117);
-    border-radius: 10px;
-    box-shadow: 3px 3px 12px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+        .admin-menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
 
+        .admin-menu-item {
+            padding: 0;
+            margin-bottom: 5px;
+        }
 
+        .admin-menu-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 1.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .admin-menu-link:hover, 
+        .admin-menu-link.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: var(--accent-color);
+        }
+
+        .admin-menu-icon {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .footer {
+            background-color: var(--card-bg);
+            padding: 1.5rem 0;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 992px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-form {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -454,9 +572,9 @@ $conn->close();
                 </div>
                 <div class="admin-controls">
                     <div class="d-none d-md-block">
-                        <span class="text-muted">Welcome, Admin</span>
+                        <span class="admin-welcome">Welcome, Admin</span>
                     </div>
-                    <a href="logout.php" class="btn btn-outline-danger">
+                    <a href="logout.php" class="btn btn-logout">
                         <i class="fas fa-sign-out-alt"></i>
                         <span class="d-none d-sm-inline ms-1">Logout</span>
                     </a>
@@ -468,89 +586,132 @@ $conn->close();
     <!-- Admin Menu -->
     <div class="offcanvas offcanvas-start" tabindex="-1" id="adminMenu">
         <div class="offcanvas-header">
-            <h5 class="offcanvas-title">Admin Menu</h5>
+            <h5 class="offcanvas-title">Admin Control Panel</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
-        <div class="offcanvas-body">
-            <div class="list-group">
-                <a href="admindash.php" class="list-group-item list-group-item-action active">
-                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                </a>
-                <a href="add_diet_plan.php" class="list-group-item list-group-item-action">
-                    <i class="fas fa-utensils me-2"></i> Manage Diet Plans
-                </a>
-                <a href="view_feedback.php" class="list-group-item list-group-item-action">
-                    <i class="fas fa-comment me-2"></i> View Feedbacks
-                </a>
-            </div>
+        <div class="offcanvas-body p-0">
+            <ul class="admin-menu-list">
+                <li class="admin-menu-item">
+                    <a href="admindash.php" class="admin-menu-link active">
+                        <span class="admin-menu-icon"><i class="fas fa-tachometer-alt"></i></span>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="admin-menu-item">
+                    <a href="add_diet_plan.php" class="admin-menu-link">
+                        <span class="admin-menu-icon"><i class="fas fa-utensils"></i></span>
+                        Manage Diet Plans
+                    </a>
+                </li>
+                <li class="admin-menu-item">
+                    <a href="view_feedback.php" class="admin-menu-link">
+                        <span class="admin-menu-icon"><i class="fas fa-comment"></i></span>
+                        View Feedbacks
+                    </a>
+                </li>
+                <li class="admin-menu-item">
+                    <a href="reports.php" class="admin-menu-link">
+                        <span class="admin-menu-icon"><i class="fas fa-chart-bar"></i></span>
+                        Analytics & Reports
+                    </a>
+                </li>
+                <li class="admin-menu-item">
+                    <a href="system_settings.php" class="admin-menu-link">
+                        <span class="admin-menu-icon"><i class="fas fa-cog"></i></span>
+                        System Settings
+                    </a>
+                </li>
+            </ul>
         </div>
     </div>
-<br><br>
-    <div class="content container">
-        <!-- User Statistics Cards -->
-        <div class="stats-grid">
-            <div class="stats-card">
-                <i class="stats-card-icon fas fa-users text-primary"></i>
-                <div class="stats-card-content">
-                    <div class="stats-card-number"><?php echo $userStats['total']['user_count']; ?></div>
-                    <div class="stats-card-title">Total Users</div>
+
+    <!-- Main Content -->
+    <main class="dashboard-container">
+        <div class="container">
+            <h1 class="section-title">Dashboard Overview</h1>
+            
+            <!-- User Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <div class="stats-card-icon text-info">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stats-card-content">
+                        <div class="stats-card-number"><?php echo $userStats['total']['user_count']; ?></div>
+                        <div class="stats-card-title">Total Users</div>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card-icon text-danger">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="stats-card-content">
+                        <div class="stats-card-number"><?php echo $userStats['roles']['admin_count']; ?></div>
+                        <div class="stats-card-title">Admin Users</div>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card-icon text-warning">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <div class="stats-card-content">
+                        <div class="stats-card-number"><?php echo $userStats['roles']['premium_count']; ?></div>
+                        <div class="stats-card-title">Premium Users</div>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card-icon text-success">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="stats-card-content">
+                        <div class="stats-card-number"><?php echo $userStats['roles']['standard_count']; ?></div>
+                        <div class="stats-card-title">Standard Users</div>
+                    </div>
                 </div>
             </div>
-            <div class="stats-card">
-                <i class="stats-card-icon fas fa-user-shield text-danger"></i>
-                <div class="stats-card-content">
-                    <div class="stats-card-number"><?php echo $userStats['roles']['admin_count']; ?></div>
-                    <div class="stats-card-title">Admin Users</div>
-                </div>
+
+            <!-- Search & Filter Form -->
+            <h2 class="section-title">User Management</h2>
+            <div class="search-filters-card">
+                <form method="POST" class="filter-form">
+                    <div class="form-group">
+                        <label for="search">Search Users</label>
+                        <input type="text" id="search" name="search" class="filter-input" placeholder="Username or email..." value="<?php echo htmlspecialchars($searchQuery); ?>">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role_filter">User Role</label>
+                        <select id="role_filter" name="role_filter" class="filter-input">
+                            <option value="">All Roles</option>
+                            <option value="admin" <?php if (isset($_POST['role_filter']) && $_POST['role_filter'] == 'admin') echo 'selected'; ?>>Admin</option>
+                            <option value="premium user" <?php if (isset($_POST['role_filter']) && $_POST['role_filter'] == 'premium user') echo 'selected'; ?>>Premium User</option>
+                            <option value="user" <?php if (isset($_POST['role_filter']) && $_POST['role_filter'] == 'user') echo 'selected'; ?>>Standard User</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="status_filter">Status</label>
+                        <select id="status_filter" name="status_filter" class="filter-input">
+                            <option value="">All Status</option>
+                            <option value="active" <?php if (isset($_POST['status_filter']) && $_POST['status_filter'] == 'active') echo 'selected'; ?>>Active</option>
+                            <option value="inactive" <?php if (isset($_POST['status_filter']) && $_POST['status_filter'] == 'inactive') echo 'selected'; ?>>Inactive</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="filter-btn">
+                            <i class="fas fa-search me-2"></i> Apply Filters
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div class="stats-card">
-                <i class="stats-card-icon fas fa-crown text-warning"></i>
-                <div class="stats-card-content">
-                    <div class="stats-card-number"><?php echo $userStats['roles']['premium_count']; ?></div>
-                    <div class="stats-card-title">Premium Users</div>
-                </div>
-            </div>
-            <div class="stats-card">
-                <i class="stats-card-icon fas fa-user text-info"></i>
-                <div class="stats-card-content">
-                    <div class="stats-card-number"><?php echo $userStats['roles']['standard_count']; ?></div>
-                    <div class="stats-card-title">Standard Users</div>
-                </div>
-            </div>
-        </div>
 
-
-<!-- Search & Filter Form -->
-<div class="card mb-4 search-container">
-    <div class="card-body">
-        <form method="POST" class="d-flex align-items-center gap-2">
-            <input type="text" name="search" class="form-control custom-input" placeholder="Search users..." value="<?php echo htmlspecialchars($searchQuery); ?>">
-
-            <!-- Filter Dropdown -->
-            <select name="status_filter" class="form-select custom-select">
-                <option value="">All Users</option>
-                <option value="active" <?php if (isset($_POST['status_filter']) && $_POST['status_filter'] == 'active') echo 'selected'; ?>>Active</option>
-                <option value="inactive" <?php if (isset($_POST['status_filter']) && $_POST['status_filter'] == 'inactive') echo 'selected'; ?>>Inactive</option>
-            </select>
-
-            <button type="submit" class="btn custom-btn">
-                <i class="fas fa-search"></i> 
-            </button>
-        </form>
-    </div>
-</div>
-
-
-
-
-        <!-- User Table -->
-        <div class="card">
-            <div class="card-body">
+            <!-- User Table -->
+            <div class="users-table-card">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="users-table">
                         <thead>
                             <tr>
-                                <!-- <th>ID</th> -->
                                 <th>Username</th>
                                 <th>Email</th>
                                 <th>Role</th>
@@ -559,58 +720,70 @@ $conn->close();
                             </tr>
                         </thead>
                         <tbody>
-                            <?php while ($row = $result->fetch_assoc()): ?>
-                                <tr>
-                                    <!-- <td><?php echo $row['user_id']; ?></td> -->
-                                    <td><?php echo htmlspecialchars($row['username']); ?></td>
-                                    <td><?php echo htmlspecialchars($row['email']); ?></td>
-                                    <td>
-                                        <?php
-                                        switch($row['role']) {
-                                            case 'admin':
-                                                echo '<span class="role-badge admin"><i class="fas fa-user-shield"></i> Admin</span>';
-                                                break;
-                                            case 'premium user':
-                                                echo '<span class="role-badge premium"><i class="fas fa-crown"></i> Premium</span>';
-                                                break;
-                                            default:
-                                                echo '<span class="role-badge user"><i class="fas fa-user"></i> User</span>';
+                            <?php if ($result->num_rows > 0): ?>
+                                <?php while ($row = $result->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($row['username']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['email']); ?></td>
+                                        <td>
+                                            <?php
+                                            switch($row['role']) {
+                                                case 'admin':
+                                                    echo '<span class="role-badge admin"><i class="fas fa-user-shield"></i> Admin</span>';
+                                                    break;
+                                                case 'premium user':
+                                                    echo '<span class="role-badge premium"><i class="fas fa-crown"></i> Premium</span>';
+                                                    break;
+                                                default:
+                                                    echo '<span class="role-badge user"><i class="fas fa-user"></i> User</span>';
                                             }
-                                                ?>
-                                                </td>
-                                                <td>
-                                                <?php if ($row['status'] == 'active'): ?>
-                                                    <span class="badge bg-success"><i class="fas fa-check-circle"></i> Active</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Inactive</span>
-                                                <?php endif; ?>
-                                            </td>
-                                                        <td>
-                                                    <a href="updaterole.php?id=<?php echo $row['user_id']; ?>" class="btn btn-primary btn-action">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <a href="admindash.php?delete=<?php echo $row['user_id']; ?>" class="btn btn-danger btn-action" onclick="return confirm('Are you sure you want to delete this user?');">
-                                                        <i class="fas fa-trash-alt"></i> 
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endwhile; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <?php if ($result->num_rows === 0): ?>
-                                <p class="text-center text-muted mt-3">No users found.</p>
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($row['status'] == 'active'): ?>
+                                                <span class="badge badge-active"><i class="fas fa-check-circle me-1"></i> Active</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-inactive"><i class="fas fa-times-circle me-1"></i> Inactive</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <div class="action-btns">
+                                                <a href="updaterole.php?id=<?php echo $row['user_id']; ?>" class="btn-table-action btn-edit" title="Edit User">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="admindash.php?delete=<?php echo $row['user_id']; ?>" class="btn-table-action btn-delete" title="Delete User" onclick="return confirm('Are you sure you want to delete this user?');">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon">
+                                                <i class="fas fa-users-slash"></i>
+                                            </div>
+                                            <p>No users found. Try adjusting your search filters.</p>
+                                        </div>
+                                    </td>
+                                </tr>
                             <?php endif; ?>
-                        </div>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
+            </div>
+        </div>
+    </main>
             
-                <!-- Footer -->
-                <footer class="text-center mt-4">
-                    <p>&copy; 2025 LifeSync. All rights reserved.</p>
-                </footer>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 LifeSync. All rights reserved.</p>
+        </div>
+    </footer>
             
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-            </body>
-            </html>
-            
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
