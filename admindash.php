@@ -81,7 +81,6 @@ $stmt->close();
 $conn->close();
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -93,20 +92,18 @@ $conn->close();
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #5D4037;
-            --primary-light: #8D6E63;
-            --primary-dark: #3E2723;
-            --secondary-color: #795548;
-            --accent-color: #FF9800;
-            --bg-color: #F5F5F5;
+            --primary-color: #2C3E50;
+            --secondary-color: #34495E;
+            --accent-color: #2980B9;
+            --bg-color: #F4F6F6;
             --card-bg: #FFFFFF;
-            --text-primary: #212121;
-            --text-secondary: #757575;
-            --border-color: #E0E0E0;
-            --success-color: #4CAF50;
-            --danger-color: #F44336;
-            --warning-color: #FFC107;
-            --info-color: #2196F3;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --border-color: #D5DBDB;
+            --success-color: #27AE60;
+            --danger-color: #E74C3C;
+            --warning-color: #F1C40F;
+            --info-color: #3498DB;
         }
 
         body {
@@ -143,7 +140,7 @@ $conn->close();
         .logo-icon {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, var(--accent-color), #FF5722);
+            background: var(--accent-color);
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -230,10 +227,10 @@ $conn->close();
         .section-title {
             font-size: 1.5rem;
             font-weight: 600;
-            color: var(--primary-dark);
+            color: var(--primary-color);
             margin-bottom: 1.5rem;
             padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--primary-light);
+            border-bottom: 2px solid var(--border-color);
         }
 
         .stats-grid {
@@ -295,7 +292,7 @@ $conn->close();
             font-size: 1.8rem;
             font-weight: bold;
             margin-bottom: 5px;
-            color: var(--primary-dark);
+            color: var(--primary-color);
         }
 
         .stats-card-title {
@@ -341,7 +338,7 @@ $conn->close();
 
         .filter-input:focus {
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(93, 64, 55, 0.2);
+            box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.2);
             outline: none;
         }
 
@@ -359,7 +356,7 @@ $conn->close();
         }
 
         .filter-btn:hover {
-            background-color: var(--primary-dark);
+            background-color: var(--secondary-color);
         }
 
         .users-table-card {
@@ -380,8 +377,8 @@ $conn->close();
         }
 
         .users-table th {
-            background-color: rgba(93, 64, 55, 0.05);
-            color: var(--primary-dark);
+            background-color: rgba(44, 62, 80, 0.05);
+            color: var(--primary-color);
             font-weight: 600;
             text-transform: uppercase;
             font-size: 0.85rem;
@@ -398,7 +395,7 @@ $conn->close();
         }
 
         .users-table tbody tr:hover {
-            background-color: rgba(93, 64, 55, 0.03);
+            background-color: rgba(44, 62, 80, 0.03);
         }
 
         .action-btns {
@@ -418,7 +415,7 @@ $conn->close();
         }
 
         .btn-edit {
-            background-color: rgba(33, 150, 243, 0.1);
+            background-color: rgba(52, 152, 219, 0.1);
             color: var(--info-color);
         }
 
@@ -428,7 +425,7 @@ $conn->close();
         }
 
         .btn-delete {
-            background-color: rgba(244, 67, 54, 0.1);
+            background-color: rgba(231, 76, 60, 0.1);
             color: var(--danger-color);
         }
 
@@ -445,19 +442,19 @@ $conn->close();
         }
 
         .badge-active {
-            background-color: rgba(76, 175, 80, 0.1);
+            background-color: rgba(39, 174, 96, 0.1);
             color: var(--success-color);
-            border: 1px solid rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(39, 174, 96, 0.2);
         }
 
         .badge-inactive {
-            background-color: rgba(244, 67, 54, 0.1);
+            background-color: rgba(231, 76, 60, 0.1);
             color: var(--danger-color);
-            border: 1px solid rgba(244, 67, 54, 0.2);
+            border: 1px solid rgba(231, 76, 60, 0.2);
         }
 
         .offcanvas {
-            background-color: var(--primary-dark);
+            background-color: var(--secondary-color);
             color: white;
             width: 280px;
         }
