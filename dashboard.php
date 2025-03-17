@@ -18,9 +18,9 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 // Check if profile picture is already stored in session
-if (!isset($_SESSION['profile_pic'])) {
-    // Corrected SQL query
-    $query = "SELECT profile_pic FROM users WHERE user_id='$user_id'";
+if (!isset($_SESSION['profile_pic']) || !isset($_SESSION['role'])) {
+    // Corrected SQL query to fetch both profile_pic and role
+    $query = "SELECT profile_pic, role FROM users WHERE user_id='$user_id'";
     $result = mysqli_query($conn, $query);
 
     // Check for query errors
@@ -33,10 +33,12 @@ if (!isset($_SESSION['profile_pic'])) {
     
     // Set profile picture or default avatar
     $_SESSION['profile_pic'] = !empty($row['profile_pic']) ? $row['profile_pic'] : 'images/default-avatar.png';
+    $_SESSION['role'] = $row['role'];
 }
 
-// Assign profile picture path
+// Assign profile picture path and role
 $profile_pic = $_SESSION['profile_pic'];
+$role = $_SESSION['role'];
 $notifQuery = "SELECT COUNT(*) AS notif_count FROM notifications WHERE user_id = ?";
 $stmt = $conn->prepare($notifQuery);
 
@@ -508,10 +510,12 @@ body {
             <i class="fas fa-envelope-open-text"></i>
                 <span>Feedback</span>
             </a>
+            <?php if ($role !== 'premium user'): ?>
             <a href="upgrade.php" class="nav-link premium">
-    <i class="fas fa-star"></i>
-    <span>Upgrade to Premium</span>
-</a>
+                <i class="fas fa-star"></i>
+                <span>Upgrade to Premium</span>
+            </a>
+            <?php endif; ?>
 
         </nav>
     </aside>

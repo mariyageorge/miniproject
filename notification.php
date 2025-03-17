@@ -34,15 +34,16 @@ $conn->query($createTableQuery) or die("Error creating notifications table: " . 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     
-    // Handle mark as read requests
+    // Handle mark as read/unread requests
     if (isset($_POST['mark_read']) && isset($_POST['notification_id'])) {
         $notification_id = intval($_POST['notification_id']);
+        $is_read = intval($_POST['mark_read']); // 1 for read, 0 for unread
         
-        $update_sql = "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?";
+        $update_sql = "UPDATE notifications SET is_read = ? WHERE id = ? AND user_id = ?";
         $update_stmt = $conn->prepare($update_sql);
         
         if ($update_stmt) {
-            $update_stmt->bind_param("ii", $notification_id, $user_id);
+            $update_stmt->bind_param("iii", $is_read, $notification_id, $user_id);
             if ($update_stmt->execute()) {
                 echo json_encode(['success' => true]);
                 exit;
@@ -53,30 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
-    // Handle delete requests
-    if (isset($_POST['delete']) && isset($_POST['notification_id'])) {
-        $notification_id = intval($_POST['notification_id']);
-        
-        $delete_sql = "DELETE FROM notifications WHERE id = ? AND user_id = ?";
-        $delete_stmt = $conn->prepare($delete_sql);
-        
-        if ($delete_stmt) {
-            $delete_stmt->bind_param("ii", $notification_id, $user_id);
-            if ($delete_stmt->execute()) {
-                echo json_encode(['success' => true]);
-                exit;
-            }
-        }
-        
-        echo json_encode(['success' => false, 'error' => 'Failed to delete notification']);
-        exit;
-    }
-    
     echo json_encode(['success' => false, 'error' => 'Invalid request']);
     exit;
 }
 
-// Update: Fetch events in the next 1 hour (was 30 minutes)
+// Fetch events in the next 1 hour
 $current_time = date('Y-m-d H:i:s');
 $one_hour_later = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
@@ -133,7 +115,7 @@ if ($stmt) {
     }
 }
 
-// Fetch latest 20 notifications (increased from 10)
+// Fetch latest 20 notifications
 $fetch_notifications = "SELECT id, message, event_datetime, is_read, created_at FROM notifications 
                         WHERE user_id = ? ORDER BY created_at DESC LIMIT 20";
 $notif_stmt = $conn->prepare($fetch_notifications);
@@ -161,7 +143,7 @@ $notifications_json = json_encode($all_notifications);
     <title>Notifications</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
+         body {
             font-family: 'Georgia', serif;
             background-color: #f5ece5;
             color: #3e2723;
@@ -238,18 +220,6 @@ $notifications_json = json_encode($all_notifications);
             cursor: not-allowed;
             opacity: 0.6;
         }
-        .delete-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 3px 8px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .delete-btn:hover {
-            background: #c82333;
-        }
         .empty-state {
             text-align: center;
             padding: 30px;
@@ -308,6 +278,7 @@ $notifications_json = json_encode($all_notifications);
             50% { opacity: 0.8; }
             100% { opacity: 1; }
         }
+
     </style>
 </head>
 <body>
@@ -316,10 +287,6 @@ $notifications_json = json_encode($all_notifications);
         <div class="notification-header">
             <div>
                 <h2>Notifications <span id="notificationCount" class="notification-badge"><?php echo count($all_notifications); ?></span></h2>
-            </div>
-            <div class="notification-actions">
-                <!-- <a href="calender.php" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Calendar</a> -->
-                <button id="refreshBtn" class="refresh-btn"><i class="fas fa-sync"></i> Refresh</button>
             </div>
         </div>
         
@@ -356,15 +323,18 @@ $notifications_json = json_encode($all_notifications);
                     <div class="<?php echo $notification_class; ?>" data-id="<?php echo $notif['id']; ?>">
                         <div class="notification-controls">
                             <?php if (!$notif['is_read'] && !$is_event_started): ?>
-                                <button class="mark-read-btn" data-id="<?php echo $notif['id']; ?>">
+                                <button class="mark-read-btn" data-id="<?php echo $notif['id']; ?>" data-action="1">
                                     Mark as read
+                                </button>
+                            <?php elseif ($notif['is_read'] && !$is_event_started): ?>
+                                <button class="mark-read-btn" data-id="<?php echo $notif['id']; ?>" data-action="0">
+                                    Mark as unread
                                 </button>
                             <?php elseif (!$notif['is_read'] && $is_event_started): ?>
                                 <button class="mark-read-btn disabled" disabled>
                                     Event started
                                 </button>
                             <?php endif; ?>
-                            <button class="delete-btn" data-id="<?php echo $notif['id']; ?>">Delete</button>
                         </div>
                         <?php echo htmlspecialchars($notif['message']); ?>
                         
@@ -387,14 +357,10 @@ $notifications_json = json_encode($all_notifications);
         </div>
     </div>
 
-
-
     <script>
         // Store notifications data
         const notifications = <?php echo $notifications_json; ?>;
-        // const alertSound = document.getElementById('alertSound');
-        // const playedAlerts = new Set(); // Keep track of alerts already played
-        
+
         // Function to update timers
         function updateTimers() {
             const timerElements = document.querySelectorAll('.timer');
@@ -445,121 +411,47 @@ $notifications_json = json_encode($all_notifications);
                         markReadBtn.disabled = true;
                         markReadBtn.textContent = 'Event started';
                     }
-                    
                 }
             });
         }
- 
 
-        
-        // Mark notification as read
+        // Mark notification as read/unread
         document.querySelectorAll('.mark-read-btn').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
                 const notificationId = this.dataset.id;
+                const action = this.dataset.action; // 1 for read, 0 for unread
                 const notification = this.closest('.notification');
                 
-                // Send AJAX request to mark as read
+                // Send AJAX request to mark as read/unread
                 fetch('notification.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: 'mark_read=1&notification_id=' + notificationId
+                    body: `mark_read=${action}&notification_id=${notificationId}`
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        notification.classList.add('read');
-                        this.remove();
-                        
-                        // Update notification count for unread items
-                        updateNotificationCount();
+                        // Toggle the read/unread state in the DOM
+                        if (action === '1') {
+                            notification.classList.add('read');
+                            this.textContent = 'Mark as unread';
+                            this.dataset.action = '0';
+                        } else {
+                            notification.classList.remove('read');
+                            this.textContent = 'Mark as read';
+                            this.dataset.action = '1';
+                        }
+                    } else {
+                        console.error('Error:', data.error);
                     }
                 })
                 .catch(error => console.error('Error:', error));
             });
         });
-        
-// Updated Delete notification functionality
-document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        const notificationId = this.dataset.id;
-        const notification = this.closest('.notification');
-        
-        console.log('Deleting notification ID:', notificationId); // Debug
-        
-        // Send AJAX request to delete
-        fetch('notification.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'delete=1&notification_id=' + notificationId
-        })
-        .then(response => {
-            console.log('Response status:', response.status); // Debug
-            return response.json();
-        })
-        .then(data => {
-            console.log('Response data:', data); // Debug
-            
-            if (data.success) {
-                // Immediately remove the notification from the DOM
-                notification.style.opacity = '0';
-                notification.style.height = '0';
-                notification.style.margin = '0';
-                notification.style.padding = '0';
-                notification.style.overflow = 'hidden';
-                
-                // Complete removal after animation
-                setTimeout(() => {
-                    notification.remove();
-                    
-                    // Update notification count
-                    updateNotificationCount();
-                    
-                    // Show empty state if no notifications left
-                    const remainingNotifications = document.querySelectorAll('.notification');
-                    if (remainingNotifications.length === 0) {
-                        const emptyState = document.createElement('div');
-                        emptyState.className = 'empty-state';
-                        emptyState.innerHTML = '<p>You have no notifications at this time.</p>';
-                        document.getElementById('notificationContainer').appendChild(emptyState);
-                    }
-                }, 300);
-            } else {
-                console.error('Error from server:', data.error || 'Unknown error');
-                alert('Could not delete notification. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Network or parsing error:', error);
-            alert('An error occurred while trying to delete the notification.');
-        });
-    });
-});
-        
-        // Update notification count
-        function updateNotificationCount() {
-            const countBadge = document.getElementById('notificationCount');
-            const currentNotifications = document.querySelectorAll('.notification').length;
-            countBadge.textContent = currentNotifications;
-            
-            // Hide badge if no notifications
-            if (currentNotifications === 0) {
-                countBadge.style.display = 'none';
-            } else {
-                countBadge.style.display = 'inline-block';
-            }
-        }
-        
-        // Refresh notifications
-        document.getElementById('refreshBtn').addEventListener('click', function() {
-            window.location.reload();
-        });
-        
+
         // Update timers every second
         updateTimers();
         setInterval(updateTimers, 1000);
@@ -570,3 +462,4 @@ document.querySelectorAll('.delete-btn').forEach(btn => {
 <?php
 $conn->close();
 ?>
+       

@@ -195,7 +195,7 @@ if (!isset($_SESSION['username'])) {
             <ul>
                 <li><i class="fas fa-check-circle"></i> Unlimited Todos</li>
                 <li><i class="fas fa-check-circle"></i> Access to Exclusive Content</li>
-                <li><i class="fas fa-check-circle"></i> Priority Support</li>
+                <li><i class="fas fa-check-circle"></i> Expense reports</li>
                 <li><i class="fas fa-check-circle"></i> Advanced Health & Task Features</li>
             </ul>
             <button class="upgrade-btn" onclick="window.location.href='payment.php';">

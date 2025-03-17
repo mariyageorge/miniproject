@@ -1,3 +1,5 @@
+
+
 <?php
 // Include necessary files
 include 'connect.php';
@@ -47,10 +49,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['delete_event'])) {
         $event_id = $_POST['event_id'];
 
-        // Delete event
+        // Delete event and its corresponding notification
         $stmt = $conn->prepare("DELETE FROM calendar_events WHERE event_id = ? AND user_id = ?");
         $stmt->bind_param("ii", $event_id, $user_id);
         if ($stmt->execute()) {
+            // Delete corresponding notification
+            $deleteNotifStmt = $conn->prepare("DELETE FROM notifications WHERE event_id = ? AND user_id = ?");
+            $deleteNotifStmt->bind_param("ii", $event_id, $user_id);
+            $deleteNotifStmt->execute();
+            $deleteNotifStmt->close();
+
             $success_message = "Event deleted successfully!";
         } else {
             $error_message = "Error deleting event: " . $stmt->error;

@@ -1,3 +1,4 @@
+
 <?php
 session_start();
 if (!isset($_SESSION['username'])) {
@@ -60,11 +61,40 @@ if ($stmt) {
 $amount = 199.00; // Default amount from upgrade page
 
 // Razorpay credentials
-$razorpay_key_id = "YOUR_RAZORPAY_KEY_ID";
-$razorpay_key_secret = "YOUR_RAZORPAY_KEY_SECRET";
+$razorpay_key_id = "rzp_test_j6ZARUQlnkvesy";
+$razorpay_key_secret = "o4vFaPvOvANpqF9X8FcyqGka";
 
-// Create order ID
-$orderId = 'ORD_' . time();
+// Convert amount to paise
+$order_amount = $amount * 100;
+
+// Order Data
+$orderData = [
+    'receipt'   => 'receipt_' . rand(1000, 9999),
+    'amount'    => $order_amount, // Amount in paise
+    'currency'  => 'INR'
+];
+
+// Create Razorpay Order
+$ch = curl_init('https://api.razorpay.com/v1/orders');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, $razorpay_key_id . ":" . $razorpay_key_secret);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($orderData));
+curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+
+$response = curl_exec($ch);
+$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+// Decode API response
+$order = json_decode($response);
+$orderId = $order->id ?? '';
+
+if ($http_code !== 200 || empty($orderId)) {
+    echo "<pre>Error Response from Razorpay: ";
+    print_r($response);
+    echo "</pre>";
+    die("Error creating Razorpay order.");
+}
 
 // Save order details to session
 $_SESSION['order_id'] = $orderId;
@@ -749,7 +779,7 @@ body {
         document.getElementById('razorpay-button').onclick = function(e) {
             var options = {
                 "key": "<?php echo $razorpay_key_id; ?>",
-                "amount": "<?php echo $amount * 100; ?>", // Amount in smallest currency unit
+                "amount": "<?php echo $order_amount; ?>", // Amount in smallest currency unit
                 "currency": "INR",
                 "name": "LifeSync Premium",
                 "description": "Premium Subscription",

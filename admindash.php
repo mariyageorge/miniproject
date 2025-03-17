@@ -476,8 +476,8 @@ $conn->close();
                 <a href="admindash.php" class="list-group-item list-group-item-action active">
                     <i class="fas fa-tachometer-alt me-2"></i> Dashboard
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
-                    <i class="fas fa-bell me-2"></i> Add Articles
+                <a href="add_diet_plan.php" class="list-group-item list-group-item-action">
+                    <i class="fas fa-utensils me-2"></i> Manage Diet Plans
                 </a>
                 <a href="view_feedback.php" class="list-group-item list-group-item-action">
                     <i class="fas fa-comment me-2"></i> View Feedbacks

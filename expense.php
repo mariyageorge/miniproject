@@ -9,6 +9,7 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username'];
 $user_id = $_SESSION['user_id'];
+$role = $_SESSION['role'] ?? 'user';
 
 $sql = "CREATE TABLE IF NOT EXISTS expenses (
     expense_id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -43,20 +44,31 @@ if (!mysqli_query($conn, $sql)) {
 
 // Handle expense submission
 if (isset($_POST['add_expense'])) {
-    $amount = $_POST['amount'];
-    $description = $_POST['description'];
-    $category = $_POST['category'];
-    $date = $_POST['date'] ?: date('Y-m-d');
+    $amount = mysqli_real_escape_string($conn, $_POST['amount']);
+    $description = mysqli_real_escape_string($conn, $_POST['description']);
+    $category = mysqli_real_escape_string($conn, $_POST['category']);
+    $date = mysqli_real_escape_string($conn, $_POST['date']) ?: date('Y-m-d');
     
-    $sql = "INSERT INTO expenses (user_id, amount, description, category, date) 
-            VALUES (?, ?, ?, ?, ?)";
-    $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, 'idsss', $user_id, $amount, $description, $category, $date);
-    
-    if (mysqli_stmt_execute($stmt)) {
-        $success_message = "Expense added successfully!";
+    // Validate inputs
+    if (empty($amount) || empty($description) || empty($category)) {
+        echo "<script>alert('Please fill in all required fields.');</script>";
     } else {
-        $error_message = "Error: " . mysqli_error($conn);
+        $sql = "INSERT INTO expenses (user_id, amount, description, category, date) 
+                VALUES (?, ?, ?, ?, ?)";
+        $stmt = mysqli_prepare($conn, $sql);
+        
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, "idsss", $user_id, $amount, $description, $category, $date);
+            
+            if (mysqli_stmt_execute($stmt)) {
+                echo "<script>alert('Expense added successfully!'); window.location.href = 'expense.php';</script>";
+            } else {
+                echo "<script>alert('Error adding expense: " . mysqli_error($conn) . "');</script>";
+            }
+            mysqli_stmt_close($stmt);
+        } else {
+            echo "<script>alert('Error preparing statement: " . mysqli_error($conn) . "');</script>";
+        }
     }
 }
 
@@ -253,20 +265,35 @@ $category_pie_json = json_encode([
 
 // Handle Delete Expense
 if (isset($_POST['delete_expense'])) {
-    $expense_id = $_POST['expense_id'];
-
-    // Prepare and execute the delete query
-    $delete_sql = "DELETE FROM expenses WHERE expense_id = ? AND user_id = ?";
-    $stmt = mysqli_prepare($conn, $delete_sql);
-    mysqli_stmt_bind_param($stmt, 'ii', $expense_id, $user_id);
-
-    if (mysqli_stmt_execute($stmt)) {
-        $success_message = "Expense deleted successfully!";
-        // Refresh the page to reflect changes
-        header("Location: ".$_SERVER['PHP_SELF']);
-        exit();
-    } else {
-        $error_message = "Error deleting expense: " . mysqli_error($conn);
+    $expense_id = mysqli_real_escape_string($conn, $_POST['expense_id']);
+    
+    // Validate expense belongs to user
+    $check_sql = "SELECT * FROM expenses WHERE expense_id = ? AND user_id = ?";
+    $check_stmt = mysqli_prepare($conn, $check_sql);
+    
+    if ($check_stmt) {
+        mysqli_stmt_bind_param($check_stmt, "ii", $expense_id, $user_id);
+        mysqli_stmt_execute($check_stmt);
+        $result = mysqli_stmt_get_result($check_stmt);
+        
+        if (mysqli_num_rows($result) > 0) {
+            $delete_sql = "DELETE FROM expenses WHERE expense_id = ? AND user_id = ?";
+            $delete_stmt = mysqli_prepare($conn, $delete_sql);
+            
+            if ($delete_stmt) {
+                mysqli_stmt_bind_param($delete_stmt, "ii", $expense_id, $user_id);
+                
+                if (mysqli_stmt_execute($delete_stmt)) {
+                    echo "<script>alert('Expense deleted successfully!'); window.location.href = 'expense.php';</script>";
+                } else {
+                    echo "<script>alert('Error deleting expense: " . mysqli_error($conn) . "');</script>";
+                }
+                mysqli_stmt_close($delete_stmt);
+            }
+        } else {
+            echo "<script>alert('Expense not found or unauthorized.');</script>";
+        }
+        mysqli_stmt_close($check_stmt);
     }
 }
 ?>
@@ -548,7 +575,7 @@ if (isset($_POST['delete_expense'])) {
     /* Three-column layout for larger screens */
     .dashboard-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 1fr 3fr 1fr;
         gap: 25px;
     }
 
@@ -568,7 +595,7 @@ if (isset($_POST['delete_expense'])) {
     .expense-form {
         background-color: var(--nude-200);
         border-radius: 12px;
-        padding: 25px;
+        padding: 20px;
         box-shadow: 0 6px 12px var(--shadow-color);
         border-left: 4px solid var(--brown-primary);
         transition: all 0.3s;
@@ -1010,173 +1037,263 @@ if (isset($_POST['delete_expense'])) {
     border-color: #545b62;
 }
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
+
+    /* New sidebar and layout styles */
+    .wrapper {
+        display: flex;
+        min-height: 100vh;
+    }
+
+    .sidebar {
+        width: 250px;
+        background: var(--brown-primary);
+        color: var(--text-light);
+        padding: 20px;
+        position: fixed;
+        height: 100vh;
+        left: 0;
+        top: 0;
+        overflow-y: auto;
+    }
+
+    .main-content {
+        flex: 1;
+        margin-left: 250px;
+        padding: 20px;
+        background-color: var(--nude-100);
+    }
+
+    .sidebar-header {
+        padding: 20px 0;
+        text-align: center;
+        border-bottom: 2px solid var(--brown-light);
+        margin-bottom: 20px;
+    }
+
+    .sidebar-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .sidebar-menu li {
+        margin-bottom: 10px;
+    }
+
+    .sidebar-menu a {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        color: var(--text-light);
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+
+    .sidebar-menu a:hover,
+    .sidebar-menu a.active {
+        background: var(--brown-hover);
+        transform: translateX(5px);
+    }
+
+    .sidebar-menu i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+
+    /* Content section styles */
+    .content-section {
+        display: none;
+        animation: fadeIn 0.5s ease;
+    }
+
+    .content-section.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* Premium modal styles */
+    .premium-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        animation: fadeIn 0.3s;
+    }
+
+    .premium-modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .premium-modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+    }
+
+    .premium-icon {
+        font-size: 48px;
+        color: var(--accent-gold);
+        margin-bottom: 20px;
+    }
     </style>
 </head>
-<body><br><br><br>
-    <div class="container">
-     
-        
-        <?php if(isset($success_message)): ?>
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle"></i>
-                <?php echo $success_message; ?>
-            </div>
-        <?php endif; ?>
-        
-        <?php if(isset($error_message)): ?>
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle"></i>
-                <?php echo $error_message; ?>
-            </div>
-        <?php endif; ?>
-        
-        <!-- Stats Overview -->
-        <div class="stats-card slide-in">
-            <div class="stat-item">
-                <div class="stat-icon pulse"><i class="fas fa-calendar-day"></i></div>
-                <div class="stat-value">₹<?php echo number_format($month_to_date_spending, 2); ?></div>
-                <div class="stat-label">This Month</div>
-            </div>
-            
-            <div class="stat-item">
-                <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
-                <div class="stat-value">₹<?php echo number_format($monthly_limit ?: 0, 2); ?></div>
-                <div class="stat-label">Monthly Limit</div>
-            </div>
-            
-            <?php
-            $remaining = $monthly_limit - $month_to_date_spending;
-            $remaining = $remaining > 0 ? $remaining : 0;
-            ?>
-            <div class="stat-item">
-                <div class="stat-icon"><i class="fas fa-coins"></i></div>
-                <div class="stat-value">₹<?php echo number_format($remaining, 2); ?></div>
-                <div class="stat-label">Remaining</div>
-            </div>
-            
-            <?php
-            // Get count of expenses this month
-            $count_sql = "SELECT COUNT(*) AS count FROM expenses 
-                         WHERE user_id = ? AND MONTH(date) = ? AND YEAR(date) = ?";
-            $stmt = mysqli_prepare($conn, $count_sql);
-            mysqli_stmt_bind_param($stmt, 'iii', $user_id, $month, $year);
-            mysqli_stmt_execute($stmt);
-            $count_result = mysqli_stmt_get_result($stmt);
-            $count_row = mysqli_fetch_assoc($count_result);
-            $expense_count = $count_row['count'];
-            ?>
-            <div class="stat-item">
-                <div class="stat-icon"><i class="fas fa-receipt"></i></div>
-                <div class="stat-value"><?php echo $expense_count; ?></div>
-                <div class="stat-label">Expenses</div>
-            </div>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar"><br><br><br>
+           
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="#" class="menu-item active" data-section="dashboard">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="menu-item" data-section="add-expense">
+                        <i class="fas fa-plus-circle"></i> Add Expense
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="menu-item" data-section="recent-expenses">
+                        <i class="fas fa-history"></i> Recent Expenses
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="menu-item" data-section="category-breakdown">
+                        <i class="fas fa-chart-pie"></i> Category Breakdown
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="menu-item" data-section="spending-trends">
+                        <i class="fas fa-chart-line"></i> Spending Trends
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="menu-item" data-section="expense-summary">
+                        <i class="fas fa-file-alt"></i> Expense Summary
+                    </a>
+                </li>
+            </ul>
         </div>
-        
-        <div class="dashboard-grid">
-            <!-- Left Column -->
-            <div>
-                <!-- Monthly Progress -->
-                <div class="card bounce-in">
-                    <div class="card-header">
-                        <h3><i class="fas fa-chart-line icon-hover"></i> Monthly Budget</h3>
-                        <span class="badge"><?php echo date('F Y'); ?></span>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section active">
+    <br><br><br>
+                <!-- Stats Overview -->
+                <div class="stats-card slide-in">
+                    <div class="stat-item">
+                        <div class="stat-icon pulse"><i class="fas fa-calendar-day"></i></div>
+                        <div class="stat-value">₹<?php echo number_format($month_to_date_spending, 2); ?></div>
+                        <div class="stat-label">This Month</div>
                     </div>
-                    <div class="card-body">
-                        <?php if($monthly_limit > 0): ?>
-                            <div class="progress-container">
-                                <?php 
-                                    $percent = ($month_to_date_spending / $monthly_limit) * 100;
-                                    $bar_class = 'progress-bar';
-                                    if($percent > 90) {
-                                        $bar_class .= ' danger';
-                                    } else if($percent > 75) {
-                                        $bar_class .= ' warning';
-                                    }
-                                ?>
-                                <div class="<?php echo $bar_class; ?>" 
-                                     style="width: <?php echo min($percent, 100); ?>%">
-                                    <?php echo round($percent); ?>%
+                    
+                    <div class="stat-item">
+                        <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                        <div class="stat-value">₹<?php echo number_format($monthly_limit ?: 0, 2); ?></div>
+                        <div class="stat-label">Monthly Limit</div>
+                    </div>
+                    
+                    <?php
+                    $remaining = $monthly_limit - $month_to_date_spending;
+                    $remaining = $remaining > 0 ? $remaining : 0;
+                    ?>
+                    <div class="stat-item">
+                        <div class="stat-icon"><i class="fas fa-coins"></i></div>
+                        <div class="stat-value">₹<?php echo number_format($remaining, 2); ?></div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                    
+                    <?php
+                    // Get count of expenses this month
+                    $count_sql = "SELECT COUNT(*) AS count FROM expenses 
+                                 WHERE user_id = ? AND MONTH(date) = ? AND YEAR(date) = ?";
+                    $stmt = mysqli_prepare($conn, $count_sql);
+                    mysqli_stmt_bind_param($stmt, 'iii', $user_id, $month, $year);
+                    mysqli_stmt_execute($stmt);
+                    $count_result = mysqli_stmt_get_result($stmt);
+                    $count_row = mysqli_fetch_assoc($count_result);
+                    $expense_count = $count_row['count'];
+                    ?>
+                    <div class="stat-item">
+                        <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                        <div class="stat-value"><?php echo $expense_count; ?></div>
+                        <div class="stat-label">Expenses</div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-grid"><br><br>
+                    <!-- Monthly Progress -->
+                    <div class="card bounce-in">
+                        <div class="card-header">
+                            <span class="badge"><?php echo date('F Y'); ?></span>
+                        </div>
+                        <div class="card-body">
+                            <?php if($monthly_limit > 0): ?>
+                                <div class="progress-container">
+                                    <?php 
+                                        $percent = ($month_to_date_spending / $monthly_limit) * 100;
+                                        $bar_class = 'progress-bar';
+                                        if($percent > 90) {
+                                            $bar_class .= ' danger';
+                                        } else if($percent > 75) {
+                                            $bar_class .= ' warning';
+                                        }
+                                    ?>
+                                    <div class="<?php echo $bar_class; ?>" 
+                                         style="width: <?php echo min($percent, 100); ?>%">
+                                        <?php echo round($percent); ?>%
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <?php if($percent > 90): ?>
-                                <p style="color: #f44336; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fas fa-exclamation-triangle fa-pulse"></i>
-                                    You're close to your monthly limit!
-                                </p>
+                                
+                                <?php if($percent > 90): ?>
+                                    <p style="color: #f44336; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-exclamation-triangle fa-pulse"></i>
+                                        You're close to your monthly limit!
+                                    </p>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <p><em>No monthly limit set</em></p>
                             <?php endif; ?>
-                        <?php else: ?>
-                            <p><em>No monthly limit set</em></p>
-                        <?php endif; ?>
-                        
-                        <!-- Set Monthly Limit Form -->
-                        <div class="limit-form mt-4">
-                            <h3><i class="fas fa-sliders-h"></i> Set Monthly Spending Limit</h3>
-                            <form method="post" action="">
-                                <div class="form-group">
-                                    <label for="limit_amount">Limit Amount ($):</label>
-                                    <i class="fas fa-dollar-sign"></i>
-                                    <input type="number" step="0.01" min="0" id="limit_amount" name="limit_amount" 
-                                          class="input-with-icon" value="<?php echo $monthly_limit; ?>" required>
-                                </div>
-                                <button type="submit" name="set_limit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Set
-                                    </button>
-                            </form>
+                            
+                            <!-- Set Monthly Limit Form -->
+                            <div class="limit-form mt-4">
+                                <h3><i class="fas fa-sliders-h"></i> Set Monthly Spending Limit</h3>
+                                <form method="post" action="">
+                                    <div class="form-group">
+                                        <label for="limit_amount">Limit Amount (₹):</label>
+                                        <input type="number" step="0.01" min="0" id="limit_amount" name="limit_amount" 
+                                              class="input-with-icon" value="<?php echo $monthly_limit; ?>" required>
+                                    </div>
+                                    <button type="submit" name="set_limit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Set
+                                        </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
-                    <!-- Recent Expenses -->
-<div class="card slide-in">
-    <div class="card-header">
-        <h3><i class="fas fa-history icon-hover"></i> Recent Expenses</h3>
-    </div>
-    <div class="card-body">
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Amount</th>
-                        <th>Category</th>
-                        <th>Description</th>
-                        <th>Action</th> <!-- New column for Delete -->
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php while ($row = mysqli_fetch_assoc($recent_expenses)): ?>
-                        <tr class="expense-item">
-                            <td><?php echo date('M j, Y', strtotime($row['date'])); ?></td>
-                            <td>₹<?php echo number_format($row['amount'], 2); ?></td>
-                            <td>
-                                <span class="category-pill">
-                                    <i class="fas fa-tag"></i>
-                                    <?php echo $row['category']; ?>
-                                </span>
-                            </td>
-                            <td><?php echo $row['description']; ?></td>
-                            <td>
-    <!-- Delete Button -->
-    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal" data-expense-id="<?php echo $row['expense_id']; ?>">
-        <i class="fas fa-trash"></i> Delete
-    </button>
-</td>
-                        </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-               
-                   
-                
-            </div>
+            </section>
 
-            <!-- Middle Column -->
-            <div>
-                <!-- Add Expense Form -->
-                <div class="card bounce-in">
+            <!-- Add Expense Section -->
+            <section id="add-expense" class="content-section"><br><br><br>
+                <div class="card">
                     <div class="card-header">
                         <h3><i class="fas fa-plus-circle icon-hover"></i> Add Expense</h3>
                     </div>
@@ -1184,44 +1301,26 @@ if (isset($_POST['delete_expense'])) {
                         <form method="post" action="" class="expense-form">
                             <div class="form-group">
                                 <label for="amount">Amount (Rs):</label>
-                                <i class="fas fa-rupee-sign"></i>
                                 <input type="number" step="0.01" min="0" id="amount" name="amount" 
                                       class="input-with-icon" required>
                             </div>
                             <div class="form-group">
                                 <label for="description">Description:</label>
-                                <i class="fas fa-pen"></i>
                                 <input type="text" id="description" name="description" 
                                       class="input-with-icon" required>
                             </div>
                             <div class="form-group">
                                 <label for="category">Category:</label>
-                                <i class="fas fa-tag"></i>
                                 <select id="category" name="category" class="input-with-icon" required>
-    <!-- Add predefined categories here -->
-    <option value="Food">Food</option>
-    <option value="Transport">Transport</option>
-    <option value="Entertainment">Entertainment</option>
-    <option value="Healthcare">Healthcare</option>
-    <option value="Other">Other</option>
-
-    <!-- Existing dynamic categories from the database -->
-    <!-- <?php
-        $cat_sql = "SELECT DISTINCT category FROM expenses WHERE user_id = ? ORDER BY category";
-        $cat_stmt = mysqli_prepare($conn, $cat_sql);
-        mysqli_stmt_bind_param($cat_stmt, "i", $user_id);
-        mysqli_stmt_execute($cat_stmt);
-        $cat_result = mysqli_stmt_get_result($cat_stmt);
-        while ($cat_row = mysqli_fetch_assoc($cat_result)) {
-            echo '<option value="'.$cat_row['category'].'">'.$cat_row['category'].'</option>';
-        }
-    ?> -->
-</select>
-
+                                    <option value="Food">Food</option>
+                                    <option value="Transport">Transport</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Healthcare">Healthcare</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="date">Date:</label>
-                                <i class="fas fa-calendar-alt"></i>
                                 <input type="date" id="date" name="date" 
                                       class="input-with-icon" value="<?php echo date('Y-m-d'); ?>">
                             </div>
@@ -1231,24 +1330,69 @@ if (isset($_POST['delete_expense'])) {
                         </form>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Right Column -->
-            <div>
-                <!-- Category Breakdown -->
-                <div class="card slide-in">
+            <!-- Recent Expenses Section -->
+            <section id="recent-expenses" class="content-section"><br><br><br>
+                <div class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-chart-pie icon-hover"></i> Category Breakdown</h3>
+                        <h3><i class="fas fa-history icon-hover"></i> Recent Expenses</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th>Category</th>
+                                        <th>Description</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($row = mysqli_fetch_assoc($recent_expenses)): ?>
+                                        <tr class="expense-item">
+                                            <td><?php echo date('M j, Y', strtotime($row['date'])); ?></td>
+                                            <td>₹<?php echo number_format($row['amount'], 2); ?></td>
+                                            <td>
+                                                <span class="category-pill">
+                                                    <i class="fas fa-tag"></i>
+                                                    <?php echo $row['category']; ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo $row['description']; ?></td>
+                                            <td>
+                                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal" data-expense-id="<?php echo $row['expense_id']; ?>">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Category Breakdown Section -->
+            <section id="category-breakdown" class="content-section">
+            <br><br><br>                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-pie icon-hover"></i> Expense Categories</h3>
                     </div>
                     <div class="card-body">
                         <canvas id="categoryPieChart"></canvas>
                     </div>
                 </div>
+            </section>
 
-                <!-- Charts Section -->
-                <div class="card bounce-in">
+            <!-- Spending Trends Section -->
+            <section id="spending-trends" class="content-section">
+            <br><br><br>                <div class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-chart-bar icon-hover"></i> Spending Trends</h3>
+                        <h3><i class="fas fa-chart-bar icon-hover"></i> Spending Analysis</h3>
                     </div>
                     <div class="card-body">
                         <div class="chart-tabs">
@@ -1267,46 +1411,158 @@ if (isset($_POST['delete_expense'])) {
                         </div>
                     </div>
                 </div>
+            </section>
+
+            <!-- Expense Summary Section -->
+            <section id="expense-summary" class="content-section">
+            <br><br><br>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-search-dollar"></i> Generate Summary Report</h3>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($role === 'premium user'): ?>
+                        <form id="summaryForm" class="mb-4">
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label for="summary-year">Year:</label>
+                                        <select id="summary-year" class="form-control">
+                                            <?php 
+                                            $current_year = date('Y');
+                                            for($year = $current_year; $year >= $current_year - 5; $year--) {
+                                                echo "<option value='$year'>$year</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label for="summary-month">Month:</label>
+                                        <select id="summary-month" class="form-control">
+                                            <?php 
+                                            $months = [
+                                                1 => 'January', 2 => 'February', 3 => 'March',
+                                                4 => 'April', 5 => 'May', 6 => 'June',
+                                                7 => 'July', 8 => 'August', 9 => 'September',
+                                                10 => 'October', 11 => 'November', 12 => 'December'
+                                            ];
+                                            foreach($months as $num => $name) {
+                                                echo "<option value='$num'>$name</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>&nbsp;</label>
+                                        <button type="submit" class="btn btn-primary d-block w-100">
+                                            <i class="fas fa-search"></i> Generate
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <div id="summary-results" class="mt-4">
+                        </div>
+                        <?php else: ?>
+                        <div class="text-center py-5">
+                            <i class="fas fa-crown fa-3x text-warning mb-3"></i>
+                            <h4>Premium Feature</h4>
+                            <p>This feature is only available for premium users.</p>
+                            <p>Upgrade now to access detailed expense summaries!</p>
+                            <a href="upgrade.php" class="btn btn-primary">
+                                <i class="fas fa-arrow-up"></i> Upgrade to Premium
+                            </a>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this expense?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="post" action="" style="display: inline;">
+                        <input type="hidden" name="expense_id" id="expenseIdInput">
+                        <button type="submit" name="delete_expense" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-<!-- Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this expense?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post" action="" style="display: inline;">
-                    <input type="hidden" name="expense_id" id="expenseIdInput">
-                    <button type="submit" name="delete_expense" class="btn btn-danger">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-    
-        // Chart.js Initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            // Category Pie Chart
-            const categoryPieData = <?php echo $category_pie_json; ?>;
-            const categoryPieCtx = document.getElementById('categoryPieChart').getContext('2d');
-            new Chart(categoryPieCtx, {
+        // Sidebar Navigation
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetSection = this.getAttribute('data-section');
+                
+                // Update active states
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+                
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                document.getElementById(targetSection).classList.add('active');
+
+                // Initialize charts when their sections become active
+                setTimeout(() => {
+                    if (targetSection === 'category-breakdown') {
+                        initializePieChart();
+                    } else if (targetSection === 'spending-trends') {
+                        initializeSpendingCharts();
+                    }
+                }, 100);
+            });
+        });
+
+        // Delete expense confirmation
+        const deleteButtons = document.querySelectorAll('[data-bs-toggle="modal"]');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const expenseId = this.getAttribute('data-expense-id');
+                document.getElementById('expenseIdInput').value = expenseId;
+            });
+        });
+
+        // Chart initialization functions
+        function initializePieChart() {
+            const ctx = document.getElementById('categoryPieChart');
+            if (!ctx) return;
+
+            // Destroy existing chart if it exists
+            if (window.categoryPieChart instanceof Chart) {
+                window.categoryPieChart.destroy();
+            }
+
+            const data = <?php echo $category_pie_json; ?>;
+            
+            window.categoryPieChart = new Chart(ctx, {
                 type: 'pie',
                 data: {
-                    labels: categoryPieData.labels,
+                    labels: data.labels,
                     datasets: [{
-                        data: categoryPieData.values,
-                        backgroundColor: categoryPieData.colors,
+                        data: data.values,
+                        backgroundColor: data.colors,
                         borderWidth: 1
                     }]
                 },
@@ -1315,16 +1571,191 @@ if (isset($_POST['delete_expense'])) {
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom'
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 12
+                                }
+                            }
                         }
                     }
                 }
             });
+        }
 
-            // Weekly Bar Chart
+        function initializeSpendingCharts() {
             const weeklyData = <?php echo $weekly_json; ?>;
-            const weeklyCtx = document.getElementById('weeklyBarChart').getContext('2d');
-            new Chart(weeklyCtx, {
+            const monthlyData = <?php echo $monthly_json; ?>;
+            const yearlyData = <?php echo $yearly_json; ?>;
+
+            // Initialize Weekly Chart
+            const weeklyCtx = document.getElementById('weeklyBarChart');
+            if (weeklyCtx) {
+                if (window.weeklyChart instanceof Chart) {
+                    window.weeklyChart.destroy();
+                }
+                window.weeklyChart = new Chart(weeklyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: weeklyData.labels,
+                        datasets: [{
+                            label: 'Weekly Spending',
+                            data: weeklyData.values,
+                            backgroundColor: 'rgba(139, 69, 19, 0.8)',
+                            borderColor: 'rgba(139, 69, 19, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Initialize Monthly Chart
+            const monthlyCtx = document.getElementById('monthlyBarChart');
+            if (monthlyCtx) {
+                if (window.monthlyChart instanceof Chart) {
+                    window.monthlyChart.destroy();
+                }
+                window.monthlyChart = new Chart(monthlyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: monthlyData.labels,
+                        datasets: [{
+                            label: 'Monthly Spending',
+                            data: monthlyData.values,
+                            backgroundColor: 'rgba(139, 69, 19, 0.8)',
+                            borderColor: 'rgba(139, 69, 19, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Initialize Yearly Chart
+            const yearlyCtx = document.getElementById('yearlyBarChart');
+            if (yearlyCtx) {
+                if (window.yearlyChart instanceof Chart) {
+                    window.yearlyChart.destroy();
+                }
+                window.yearlyChart = new Chart(yearlyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: yearlyData.labels,
+                        datasets: [{
+                            label: 'Yearly Spending',
+                            data: yearlyData.values,
+                            backgroundColor: 'rgba(139, 69, 19, 0.8)',
+                            borderColor: 'rgba(139, 69, 19, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Initialize charts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize charts for the active section
+            const activeSection = document.querySelector('.content-section.active');
+            if (activeSection) {
+                if (activeSection.id === 'category-breakdown') {
+                    setTimeout(initializePieChart, 300);
+                } else if (activeSection.id === 'spending-trends') {
+                    setTimeout(initializeSpendingCharts, 300);
+                }
+            }
+
+            // Initialize delete modal functionality
+            const deleteModal = document.getElementById('deleteModal');
+            const deleteButtons = document.querySelectorAll('[data-bs-toggle="modal"]');
+            
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const expenseId = this.getAttribute('data-expense-id');
+                    document.getElementById('expenseIdInput').value = expenseId;
+                    new bootstrap.Modal(deleteModal).show();
+                });
+            });
+        });
+
+        // Chart tab switching
+        document.querySelectorAll('.chart-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const targetChart = this.getAttribute('data-chart');
+                
+                // Update active states
+                document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Show/hide chart containers
+                document.querySelectorAll('.chart-container').forEach(container => {
+                    container.classList.remove('active');
+                });
+                document.getElementById(targetChart).classList.add('active');
+
+                // Reinitialize the specific chart
+                if (targetChart === 'monthlyChart') {
+                    initializeMonthlyChart();
+                } else if (targetChart === 'yearlyChart') {
+                    initializeYearlyChart();
+                } else if (targetChart === 'weeklyChart') {
+                    initializeWeeklyChart();
+                }
+            });
+        });
+
+        // Split chart initialization into separate functions
+        function initializeWeeklyChart() {
+            const weeklyData = <?php echo $weekly_json; ?>;
+            const weeklyCtx = document.getElementById('weeklyBarChart');
+            if (!weeklyCtx) return;
+
+            if (window.weeklyChart instanceof Chart) {
+                window.weeklyChart.destroy();
+            }
+
+            window.weeklyChart = new Chart(weeklyCtx, {
                 type: 'bar',
                 data: {
                     labels: weeklyData.labels,
@@ -1341,16 +1772,28 @@ if (isset($_POST['delete_expense'])) {
                     maintainAspectRatio: false,
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value;
+                                }
+                            }
                         }
                     }
                 }
             });
+        }
 
-            // Monthly Bar Chart
+        function initializeMonthlyChart() {
             const monthlyData = <?php echo $monthly_json; ?>;
-            const monthlyCtx = document.getElementById('monthlyBarChart').getContext('2d');
-            new Chart(monthlyCtx, {
+            const monthlyCtx = document.getElementById('monthlyBarChart');
+            if (!monthlyCtx) return;
+
+            if (window.monthlyChart instanceof Chart) {
+                window.monthlyChart.destroy();
+            }
+
+            window.monthlyChart = new Chart(monthlyCtx, {
                 type: 'bar',
                 data: {
                     labels: monthlyData.labels,
@@ -1367,16 +1810,28 @@ if (isset($_POST['delete_expense'])) {
                     maintainAspectRatio: false,
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value;
+                                }
+                            }
                         }
                     }
                 }
             });
+        }
 
-            // Yearly Bar Chart
+        function initializeYearlyChart() {
             const yearlyData = <?php echo $yearly_json; ?>;
-            const yearlyCtx = document.getElementById('yearlyBarChart').getContext('2d');
-            new Chart(yearlyCtx, {
+            const yearlyCtx = document.getElementById('yearlyBarChart');
+            if (!yearlyCtx) return;
+
+            if (window.yearlyChart instanceof Chart) {
+                window.yearlyChart.destroy();
+            }
+
+            window.yearlyChart = new Chart(yearlyCtx, {
                 type: 'bar',
                 data: {
                     labels: yearlyData.labels,
@@ -1393,95 +1848,186 @@ if (isset($_POST['delete_expense'])) {
                     maintainAspectRatio: false,
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value;
+                                }
+                            }
                         }
                     }
                 }
             });
+        }
 
-            // Chart Tab Switching
-            const chartTabs = document.querySelectorAll('.chart-tab');
-            chartTabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const targetChart = this.dataset.chart;
-                    document.querySelectorAll('.chart-container').forEach(container => {
-                        container.classList.remove('active');
-                    });
-                    document.getElementById(targetChart).classList.add('active');
-                    chartTabs.forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                });
+        // Handle expense summary generation
+        document.getElementById('summaryForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            <?php if ($role !== 'premium user'): ?>
+            // Show premium upgrade modal for non-premium users
+            const premiumModal = document.createElement('div');
+            premiumModal.className = 'modal fade';
+            premiumModal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Premium Feature</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <i class="fas fa-crown fa-3x text-warning mb-3"></i>
+                            <h4>Upgrade to Premium</h4>
+                            <p>This feature is only available for premium users. Upgrade now to access detailed expense summaries!</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <a href="upgrade.php" class="btn btn-primary">Upgrade Now</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(premiumModal);
+            new bootstrap.Modal(premiumModal).show();
+            premiumModal.addEventListener('hidden.bs.modal', function() {
+                this.remove();
             });
+            return;
+            <?php endif; ?>
+
+            const year = document.getElementById('summary-year').value;
+            const month = document.getElementById('summary-month').value;
+            const resultsDiv = document.getElementById('summary-results');
+            
+            // Show loading state
+            resultsDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Generating summary...</p></div>';
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('year', year);
+            formData.append('month', month);
+            
+            // Fetch summary data
+            fetch('get_expense_summary.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.no_data) {
+                    resultsDiv.innerHTML = `
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle fa-2x mb-3"></i>
+                            <h4>No Data Available</h4>
+                            <p>${data.message}</p>
+                        </div>`;
+                    return;
+                }
+
+                // Create summary HTML
+                let summaryHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-pie"></i> Overview for ${data.month_year}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Total Expenses:</strong> ₹${data.total_amount}</p>
+                                    <p><strong>Number of Transactions:</strong> ${data.transaction_count}</p>
+                                    <p><strong>Average Expense:</strong> ₹${data.average_expense}</p>
+                                    <p><strong>Highest Expense:</strong> ₹${data.highest_expense}</p>
+                                    <p><strong>Lowest Expense:</strong> ₹${data.lowest_expense}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-tags"></i> Category Breakdown</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="summaryPieChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-calendar-day"></i> Daily Spending Pattern</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="dailySpendingChart"></canvas>
+                        </div>
+                    </div>
+                `;
+                
+                resultsDiv.innerHTML = summaryHTML;
+                
+                // Initialize summary charts
+                if (data.categories.length > 0) {
+                    new Chart(document.getElementById('summaryPieChart'), {
+                        type: 'pie',
+                        data: {
+                            labels: data.categories.map(c => c.category),
+                            datasets: [{
+                                data: data.categories.map(c => c.amount),
+                                backgroundColor: data.categories.map((_, i) => `hsl(${i * 360 / data.categories.length}, 70%, 50%)`)
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                if (data.daily_spending.length > 0) {
+                    new Chart(document.getElementById('dailySpendingChart'), {
+                        type: 'line',
+                        data: {
+                            labels: data.daily_spending.map(d => d.date),
+                            datasets: [{
+                                label: 'Daily Spending',
+                                data: data.daily_spending.map(d => d.amount),
+                                borderColor: 'rgba(139, 69, 19, 1)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: value => '₹' + value
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error generating summary: ${error.message}</div>`;
+            });
+        });
+
+        // Initialize spending trends on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeSection = document.querySelector('.content-section.active');
+            if (activeSection && activeSection.id === 'spending-trends') {
+                initializeWeeklyChart();
+            }
         });
     </script>
-    <script>
-    // Handle the modal trigger
-    document.addEventListener('DOMContentLoaded', function () {
-        var deleteModal = document.getElementById('deleteModal');
-        deleteModal.addEventListener('show.bs.modal', function (event) {
-            // Button that triggered the modal
-            var button = event.relatedTarget;
-            // Extract expense ID from data-expense-id attribute
-            var expenseId = button.getAttribute('data-expense-id');
-            // Update the hidden input in the form
-            document.getElementById('expenseIdInput').value = expenseId;
-        });
-    });
-</script>
-<!-- Add this at the end of the page, right before the closing </body> tag -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-    // Handle the modal trigger
-    document.addEventListener('DOMContentLoaded', function () {
-        // Get all delete buttons
-        const deleteButtons = document.querySelectorAll('.btn-danger[data-bs-toggle="modal"]');
-        
-        // For each delete button
-        deleteButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                // Get the expense ID
-                const expenseId = this.getAttribute('data-expense-id');
-                
-                // Set the expense ID in the hidden input
-                document.getElementById('expenseIdInput').value = expenseId;
-                
-                // Show the modal manually (in case Bootstrap JS isn't fully working)
-                const modal = document.getElementById('deleteModal');
-                modal.style.display = 'block';
-                modal.classList.add('show');
-                document.body.classList.add('modal-open');
-                
-                // Add backdrop
-                const backdrop = document.createElement('div');
-                backdrop.className = 'modal-backdrop fade show';
-                document.body.appendChild(backdrop);
-            });
-        });
-        
-        // Close modal when clicking close button or cancel
-        const closeButtons = document.querySelectorAll('[data-bs-dismiss="modal"]');
-        closeButtons.forEach(button => {
-            button.addEventListener('click', closeModal);
-        });
-        
-        // Function to close modal
-        function closeModal() {
-            const modal = document.getElementById('deleteModal');
-            modal.style.display = 'none';
-            modal.classList.remove('show');
-            document.body.classList.remove('modal-open');
-            
-            // Remove backdrop
-            const backdrop = document.querySelector('.modal-backdrop');
-            if (backdrop) {
-                document.body.removeChild(backdrop);
-            }
-        }
-    });
-</script>
-<footer class="text-center py-4 mt-4">
-        <p class="text-muted">&copy; 2025 LifeSync. All rights reserved.</p>
-    </footer>
+    <!-- Add Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
