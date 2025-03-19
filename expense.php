@@ -60,9 +60,8 @@ if (isset($_POST['add_expense'])) {
         if ($stmt) {
             mysqli_stmt_bind_param($stmt, "idsss", $user_id, $amount, $description, $category, $date);
             
-            if (mysqli_stmt_execute($stmt)) {
-                echo "<script>alert('Expense added successfully!'); window.location.href = 'expense.php';</script>";
-            } else {
+            if (!mysqli_stmt_execute($stmt)) {
+               
                 echo "<script>alert('Error adding expense: " . mysqli_error($conn) . "');</script>";
             }
             mysqli_stmt_close($stmt);

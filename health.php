@@ -210,6 +210,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             background-image: url('/api/placeholder/400/400');
             background-blend-mode: overlay;
             margin-left: 250px; /* Add space for sidebar */
+            padding-top: 80px; /* Add padding for fixed header */
         }
 
         h2 {
@@ -233,6 +234,8 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             max-width: 800px;
             border: 2px solid var(--light-brown);
             transition: transform 0.3s ease;
+            position: relative;
+            z-index: 1; /* Lower z-index than sidebar */
         }
 
         .section:hover {
@@ -604,7 +607,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             background: var(--primary-brown);
             color: var(--cream);
             padding-top: 20px;
-            z-index: 1000;
+            z-index: 900; /* Lower z-index than header */
             box-shadow: 2px 0 5px rgba(0,0,0,0.2);
         }
 
@@ -659,6 +662,8 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
         .main-content {
             padding: 20px;
             margin-left: -20px;
+            position: relative;
+            z-index: 1; /* Lower z-index than sidebar */
         }
 
         .content-wrapper {
@@ -1775,9 +1780,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
 <body>
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="sidebar-header">
-            <h3>🌟 Health Tracker</h3>
-        </div>
+       <br><br>
         <ul class="sidebar-menu">
             <li><a href="#" class="menu-item active" data-section="dashboard"><i>🏠</i>Dashboard</a></li>
             <li><a href="#" class="menu-item" data-section="water-tracking"><i>💧</i>Water Intake</a></li>
@@ -1786,16 +1789,14 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             <li><a href="#" class="menu-item" data-section="exercise"><i>🏃‍♂️</i>Exercise</a></li>
             <li><a href="#" class="menu-item" data-section="advanced-analytics"><i>📊</i>Analytics</a></li>
             <li><a href="#" class="menu-item" data-section="meal-planner"><i>📅</i>Meal Planner</a></li>
-            <?php if ($role !== 'premium user'): ?>
-            <li><a href="upgrade.php" class="premium"><i>⭐</i>Upgrade to Premium</a></li>
-            <?php endif; ?>
-            <li><a href="#" class="menu-item" data-section="profile"><i>👤</i>Profile</a></li>
+           
+            <li><a href="#" class="menu-item" data-section="profile"><i>👤</i> Health Profile</a></li>
         </ul>
     </div>
 
     <!-- Main Content -->
     <div class="main-content">
-        <div class="content-wrapper"><br><br><br>
+        
             <!-- Quick Overview Section -->
             <div class="section" id="overview-section">
                 <h3>📊 Quick Overview</h3>
@@ -1931,7 +1932,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
                 
         <!-- Diet Suggestions Section -->
         <div class="section" id="diet-section">
-            <h3>�� Diet Suggestions</h3>
+            <h3>🥗🍎🥦Diet Suggestions</h3>
                 <div class="diet-suggestion">
                 <h4>Recommended Daily Calories: <?php echo $current_diet_plan['daily_calories']; ?> kcal</h4>
                 <div class="tips-list">
@@ -2034,7 +2035,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
                             <li>📱 Export reports and data</li>
                     </ul>
                         <div class="premium-price">
-                            <span class="price">$9.99</span>
+                            <span class="price">Rs.199</span>
                             <span class="period">/month</span>
                 </div>
                         <a href="upgrade.php" class="premium-btn">Upgrade to Premium</a>
@@ -2058,7 +2059,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
 
         <!-- Profile Section -->
         <div class="section" id="profile-section" style="display: none;">
-            <h3>👤 My Profile</h3>
+            <h3>👤 Health Profile</h3>
             <?php
             // Fetch user's profile data
             $profile_query = "SELECT height, weight, age, gender, bmi FROM health_tracking WHERE user_id = ? ORDER BY date DESC LIMIT 1";

@@ -25,15 +25,17 @@ $result = $conn->query($feedbackQuery);
     <title>View Feedback - Admin Dashboard</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #6F4E37;
-            --secondary-color: #8B4513;
-            --accent-color: #D2691E;
-            --bg-color: #F4ECD8;
-            --card-bg: #F5DEB3;
-            --text-primary: #3E2723;
-            --text-secondary: #5D4037;
+            --primary-color: #8B4513;
+            --secondary-color: #DEB887;
+            --accent-color: #A0522D;
+            --bg-color: #FAEBD7;
+            --card-bg: #FFFFFF;
+            --text-primary: #8B4513;
+            --text-secondary: #A0522D;
+            --border-color: #DEB887;
         }
 
         body {
@@ -45,7 +47,7 @@ $result = $conn->query($feedbackQuery);
 
         .header {
             width: 100%;
-            background: white;
+            background: var(--primary-color);
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
@@ -66,7 +68,7 @@ $result = $conn->query($feedbackQuery);
         .logo-icon {
             width: 40px;
             height: 40px;
-            background: var(--secondary-color);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -78,84 +80,169 @@ $result = $conn->query($feedbackQuery);
         .logo-text {
             font-size: 1.2rem;
             font-weight: bold;
-            color: var(--secondary-color);
+            color: white;
             letter-spacing: 1px;
         }
 
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
         .back-button {
             padding: 8px 16px;
-            background:  #8B4513;
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             text-decoration: none;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .back-button:hover {
-            background:  #A0522D;
-        }
-        .admin-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
         }
 
-       
+        .container {
+            max-width: 1200px;
+            margin: 100px auto 40px;
+            padding: 0 20px;
+        }
+
+        .page-title {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .feedback-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
 
         .feedback-card {
             background-color: var(--card-bg);
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .feedback-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
 
         .feedback-header {
-            background-color: var(--secondary-color);
+            background-color: var(--primary-color);
             color: white;
-            padding: 15px;
-            border-radius: 10px 10px 0 0;
+            padding: 1.25rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .feedback-content {
-            padding: 20px;
+        .feedback-user {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
         }
 
-        .feedback-meta {
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .user-info h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .feedback-date {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .feedback-content {
+            padding: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .feedback-message {
+            color: var(--text-primary);
+            margin-bottom: 1.25rem;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .feedback-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             color: var(--text-secondary);
             font-size: 0.9rem;
-            margin-top: 10px;
-            border-top: 1px solid rgba(0,0,0,0.1);
-            padding-top: 10px;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .feedback-rating i {
+            color: #FFD700;
         }
 
         .no-feedback {
             text-align: center;
-            padding: 40px;
+            padding: 4rem 2rem;
             background-color: var(--card-bg);
-            border-radius: 10px;
-            margin-top: 20px;
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+
+        .no-feedback i {
+            font-size: 3rem;
+            color: var(--text-secondary);
+            opacity: 0.5;
+            margin-bottom: 1rem;
+        }
+
+        .no-feedback h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .no-feedback p {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            .feedback-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                margin-top: 80px;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Main Header -->
     <header class="header">
-   
         <div class="logo-section">
             <div class="logo-icon">
                 <i class="fas fa-infinity"></i>
@@ -163,57 +250,50 @@ $result = $conn->query($feedbackQuery);
             <span class="logo-text">LIFE-SYNC</span>
         </div>
         
-        <div class="header-right">
         <a href="admindash.php" class="back-button">
-        <i class="fas fa-arrow-left"></i> 
-    </a>
-        </div>
-    
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
     </header>
-<br><br><br>
 
-    <div class="container mt-5">
-
-    
-    <?php if ($result->num_rows > 0): ?>
-        <div class="row">
-            <?php while ($feedback = $result->fetch_assoc()): ?>
-                <div class="col-md-4">
+    <div class="container">
+        <h1 class="page-title">User Feedback</h1>
+        
+        <?php if ($result->num_rows > 0): ?>
+            <div class="feedback-grid">
+                <?php while ($feedback = $result->fetch_assoc()): ?>
                     <div class="feedback-card">
                         <div class="feedback-header">
-                            <h5 class="mb-0">
-                                <i class="fas fa-comment me-2"></i>
-                                Feedback from <?php echo htmlspecialchars($feedback['username'] ?? 'Anonymous'); ?>
-                            </h5>
-                            <span class="badge bg-light text-dark">
-                                <?php echo date('M d, Y', strtotime($feedback['created_at'])); ?>
-                            </span>
+                            <div class="feedback-user">
+                                <div class="user-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="user-info">
+                                    <h5><?php echo htmlspecialchars($feedback['username'] ?? 'Anonymous'); ?></h5>
+                                    <span class="feedback-date">
+                                        <?php echo date('M d, Y', strtotime($feedback['created_at'])); ?>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <div class="feedback-content">
-                            <p><?php echo htmlspecialchars($feedback['message']); ?></p>
-                            <div class="feedback-meta">
-                                <i class="fas fa-star text-warning me-1"></i>
-                                Rating: <?php echo $feedback['rating']; ?>/5
+                            <p class="feedback-message"><?php echo htmlspecialchars($feedback['message']); ?></p>
+                            <div class="feedback-rating">
+                                <i class="fas fa-star"></i>
+                                <span>Rating: <?php echo $feedback['rating']; ?>/5</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            <?php endwhile; ?>
-        </div>
-    <?php else: ?>
-        <div class="no-feedback">
-            <i class="fas fa-comments fa-3x mb-3 text-muted"></i>
-            <h4>No Feedback Yet</h4>
-            <p class="text-muted">There are currently no feedback submissions to display.</p>
-        </div>
-    <?php endif; ?>
-</div>
-
-
-    <!-- Footer -->
-    <footer class="text-center mt-4 mb-4">
-        <p>&copy; 2025 LifeSync. All rights reserved.</p>
-    </footer>
+                <?php endwhile; ?>
+            </div>
+        <?php else: ?>
+            <div class="no-feedback">
+                <i class="fas fa-comments"></i>
+                <h4>No Feedback Yet</h4>
+                <p>There are currently no feedback submissions to display.</p>
+            </div>
+        <?php endif; ?>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 </body>

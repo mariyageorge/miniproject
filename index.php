@@ -236,7 +236,7 @@
 
     <!-- Hero Section -->
     <section class="hero-section">
-        <div class="container">
+        <div class="container"><br><br>
             <div class="row align-items-center">
                 <div class="col-lg-6">
                     <h1 class="display-4 fw-bold mb-4">Sync Your Life, Simplify Your Day</h1>
