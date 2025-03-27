@@ -1,167 +1,164 @@
 <?php
 session_start();
-require_once 'connect.php';
+include("connect.php");
 
 header('Content-Type: application/json');
 
+// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['error' => 'Please login to continue']);
+    echo json_encode(['success' => false, 'error' => 'Please log in to invite members']);
     exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['error' => 'Invalid request method']);
-    exit();
-}
-
-$user_id = $_SESSION['user_id'];
-$group_id = isset($_POST['group_id']) ? intval($_POST['group_id']) : 0;
-$emails = isset($_POST['emails']) ? json_decode($_POST['emails'], true) : [];
-$message = isset($_POST['message']) ? trim($_POST['message']) : '';
-
-if (!$group_id) {
-    echo json_encode(['error' => 'Invalid group ID']);
-    exit();
-}
-
-if (empty($emails)) {
-    echo json_encode(['error' => 'Please provide at least one email address']);
-    exit();
-}
-
-// Verify user is the group creator
-$check_creator = "SELECT created_by FROM expense_groups WHERE group_id = ?";
-$stmt = mysqli_prepare($conn, $check_creator);
-mysqli_stmt_bind_param($stmt, "i", $group_id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$group = mysqli_fetch_assoc($result);
-
-if (!$group || $group['created_by'] != $user_id) {
-    echo json_encode(['error' => 'You do not have permission to invite members to this group']);
-    exit();
-}
-
-$success_count = 0;
-$errors = [];
-
-foreach ($emails as $email) {
-    // Validate email
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Invalid email format: $email";
-        continue;
-    }
-
-    // Check if user exists
-    $user_query = "SELECT user_id FROM users WHERE email = ?";
-    $stmt = mysqli_prepare($conn, $user_query);
-    mysqli_stmt_bind_param($stmt, "s", $email);
-    mysqli_stmt_execute($stmt);
-    $user_result = mysqli_stmt_get_result($stmt);
-    $user = mysqli_fetch_assoc($user_result);
-
-    if (!$user) {
-        $errors[] = "User not found: $email";
-        continue;
-    }
-
-    // Check if user is already a member
-    $member_query = "SELECT invitation_status FROM group_members WHERE group_id = ? AND user_id = ?";
-    $stmt = mysqli_prepare($conn, $member_query);
-    mysqli_stmt_bind_param($stmt, "ii", $group_id, $user['user_id']);
-    mysqli_stmt_execute($stmt);
-    $member_result = mysqli_stmt_get_result($stmt);
-    $member = mysqli_fetch_assoc($member_result);
-
-    if ($member) {
-        if ($member['invitation_status'] === 'accepted') {
-            $errors[] = "User is already a member: $email";
-        } elseif ($member['invitation_status'] === 'pending') {
-            $errors[] = "Invitation already sent: $email";
-        } elseif ($member['invitation_status'] === 'declined') {
-            $errors[] = "User declined previous invitation: $email";
-        }
-        continue;
-    }
-
-    // Generate invitation token
-    $token = bin2hex(random_bytes(32));
-    $expires_at = date('Y-m-d H:i:s', strtotime('+7 days'));
-
-    // Insert invitation
-    $invite_query = "INSERT INTO group_members (group_id, user_id, invitation_token, invitation_status, expires_at) 
-                     VALUES (?, ?, ?, 'pending', ?)";
-    $stmt = mysqli_prepare($conn, $invite_query);
-    mysqli_stmt_bind_param($stmt, "iiss", $group_id, $user['user_id'], $token, $expires_at);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $group_id = mysqli_real_escape_string($conn, $_POST['group_id']);
+    $user_id = $_SESSION['user_id'];
     
-    if (mysqli_stmt_execute($stmt)) {
-        $success_count++;
-
-        // Send invitation email
-        $group_query = "SELECT group_name FROM expense_groups WHERE group_id = ?";
-        $stmt = mysqli_prepare($conn, $group_query);
-        mysqli_stmt_bind_param($stmt, "i", $group_id);
-        mysqli_stmt_execute($stmt);
-        $group_result = mysqli_stmt_get_result($stmt);
-        $group_info = mysqli_fetch_assoc($group_result);
-
-        $invite_link = "http://" . $_SERVER['HTTP_HOST'] . "/accept_invitation.php?token=" . $token . "&group_id=" . $group_id;
+    // Check if user has permission to invite (is creator or member)
+    $check_permission = "SELECT * FROM group_members 
+                        WHERE group_id = '$group_id' 
+                        AND user_id = '$user_id' 
+                        AND invitation_status = 'accepted'";
+    $permission_result = mysqli_query($conn, $check_permission);
+    
+    if (mysqli_num_rows($permission_result) === 0) {
+        echo json_encode(['success' => false, 'error' => 'You do not have permission to invite members to this group']);
+        exit();
+    }
+    
+    // Get group name for invitation email
+    $group_query = "SELECT group_name FROM expense_groups WHERE group_id = '$group_id'";
+    $group_result = mysqli_query($conn, $group_query);
+    $group_data = mysqli_fetch_assoc($group_result);
+    $group_name = $group_data['group_name'];
+    
+    $success_count = 0;
+    $error_messages = [];
+    
+    if (!empty($_POST['invite_members'])) {
+        $members = explode(',', $_POST['invite_members']);
         
-        // Get sender's name
-        $sender_query = "SELECT username FROM users WHERE user_id = ?";
-        $stmt = mysqli_prepare($conn, $sender_query);
-        mysqli_stmt_bind_param($stmt, "i", $user_id);
-        mysqli_stmt_execute($stmt);
-        $sender_result = mysqli_stmt_get_result($stmt);
-        $sender = mysqli_fetch_assoc($sender_result);
+        foreach ($members as $member_email) {
+            $member_email = trim($member_email);
+            
+            // Check if email exists in users table
+            $check_user = "SELECT user_id, username FROM users WHERE email = ?";
+            $stmt = mysqli_prepare($conn, $check_user);
+            mysqli_stmt_bind_param($stmt, "s", $member_email);
+            mysqli_stmt_execute($stmt);
+            $user_result = mysqli_stmt_get_result($stmt);
+            
+            if (mysqli_num_rows($user_result) > 0) {
+                $member_data = mysqli_fetch_assoc($user_result);
+                $member_id = $member_data['user_id'];
+                
+                // Check if already a member
+                $check_member = "SELECT invitation_status FROM group_members 
+                               WHERE group_id = ? AND user_id = ?";
+                $stmt = mysqli_prepare($conn, $check_member);
+                mysqli_stmt_bind_param($stmt, "ii", $group_id, $member_id);
+                mysqli_stmt_execute($stmt);
+                $member_result = mysqli_stmt_get_result($stmt);
+                
+                if (mysqli_num_rows($member_result) > 0) {
+                    $member_status = mysqli_fetch_assoc($member_result)['invitation_status'];
+                    if ($member_status === 'accepted') {
+                        $error_messages[] = "$member_email is already a member of this group";
+                    } else {
+                        $error_messages[] = "$member_email has a pending invitation";
+                    }
+                    continue;
+                }
+                
+                // Generate invitation token
+                $token = bin2hex(random_bytes(16));
+                
+                // Add to group_members table
+                $insert_invitation = "INSERT INTO group_members (group_id, user_id, invitation_status, invitation_token) 
+                                   VALUES (?, ?, 'pending', ?)";
+                $stmt = mysqli_prepare($conn, $insert_invitation);
+                mysqli_stmt_bind_param($stmt, "iis", $group_id, $member_id, $token);
+                
+                if (mysqli_stmt_execute($stmt)) {
+                    // Send invitation email
+                    if (sendInvitationEmail($member_email, $_SESSION['username'], $group_name, $token, $group_id)) {
+                        $success_count++;
+                    } else {
+                        $error_messages[] = "Failed to send invitation email to $member_email";
+                    }
+                } else {
+                    $error_messages[] = "Failed to create invitation for $member_email";
+                }
+            } else {
+                $error_messages[] = "$member_email is not registered in LIFE-SYNC";
+            }
+        }
+    }
+    
+    $response = [];
+    if ($success_count > 0) {
+        $response['success'] = true;
+        $response['message'] = "Successfully sent " . $success_count . " invitation" . ($success_count > 1 ? "s" : "");
+    }
+    
+    if (!empty($error_messages)) {
+        if (!isset($response['success'])) {
+            $response['success'] = false;
+        }
+        $response['error'] = implode("<br>", $error_messages);
+    }
+    
+    echo json_encode($response);
+    exit();
+}
 
-        $to = $email;
-        $subject = "You've been invited to join " . $group_info['group_name'] . " on LIFE-SYNC";
-        $headers = "From: noreply@lifesync.com\r\n";
-        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-
-        $email_content = "
+function sendInvitationEmail($email, $inviter_name, $group_name, $token, $group_id) {
+    require_once 'vendor/autoload.php';
+    
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+    
+    try {
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'lifesyncdigital@gmail.com';
+        $mail->Password = 'yrpw iqys blcl famq';
+        $mail->SMTPSecure = 'tls';
+        $mail->Port = 587;
+        
+        $mail->setFrom('lifesyncdigital@gmail.com', 'LIFE-SYNC');
+        $mail->addAddress($email);
+        
+        $mail->isHTML(true);
+        $mail->Subject = 'Invitation to join expense group: ' . $group_name;
+        
+        $invitation_link = "http://{$_SERVER['HTTP_HOST']}/miniproject-main/miniproject-main/accept_invitation.php?token=" . $token . "&group=" . $group_id;
+        
+        $mail->Body = "
             <html>
-            <head>
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .button { display: inline-block; padding: 10px 20px; background: #8B4513; color: white; text-decoration: none; border-radius: 5px; }
-                    .footer { margin-top: 20px; font-size: 12px; color: #666; }
-                </style>
-            </head>
-            <body>
-                <div class='container'>
-                    <h2>You've been invited to join {$group_info['group_name']}!</h2>
-                    <p>{$sender['username']} has invited you to join their expense sharing group on LIFE-SYNC.</p>
-                    " . ($message ? "<p><strong>Message from {$sender['username']}:</strong><br>{$message}</p>" : "") . "
+            <body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
+                <div style='max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
+                    <h2 style='color: #2C3E50;'>LIFE-SYNC Expense Splitter</h2>
+                    <p>Hello,</p>
+                    <p><strong>{$inviter_name}</strong> has invited you to join the expense group <strong>'{$group_name}'</strong>.</p>
                     <p>Click the button below to accept the invitation:</p>
-                    <p><a href='{$invite_link}' class='button'>Accept Invitation</a></p>
-                    <p>This invitation will expire in 7 days.</p>
-                    <p>If you don't want to join this group, you can safely ignore this email.</p>
-                    <div class='footer'>
-                        <p>This is an automated message from LIFE-SYNC. Please do not reply to this email.</p>
-                    </div>
+                    <p style='text-align: center;'>
+                        <a href='{$invitation_link}' style='display: inline-block; padding: 10px 20px; background-color: #2C3E50; color: white; text-decoration: none; border-radius: 5px;'>Accept Invitation</a>
+                    </p>
+                    <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                    <p>{$invitation_link}</p>
+                    <p>Thank you,<br>The LIFE-SYNC Team</p>
                 </div>
             </body>
             </html>
         ";
-
-        mail($to, $subject, $email_content, $headers);
-    } else {
-        $errors[] = "Failed to send invitation to: $email";
+        
+        $mail->AltBody = "Hello, {$inviter_name} has invited you to join the expense group '{$group_name}'. To accept the invitation, please visit: {$invitation_link}";
+        
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        return false;
     }
-}
-
-if ($success_count > 0) {
-    echo json_encode([
-        'success' => true,
-        'message' => "Successfully sent $success_count invitation(s)" . 
-                    (!empty($errors) ? ". Some errors occurred: " . implode(", ", $errors) : "")
-    ]);
-} else {
-    echo json_encode([
-        'error' => 'Failed to send any invitations',
-        'details' => $errors
-    ]);
 } 

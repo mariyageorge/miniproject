@@ -1261,6 +1261,19 @@ $diet_plans_result = $conn->query($diet_plans_query);
                 box-shadow: none !important;
             }
         }
+        .chart-box {
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+.chart-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+.chart-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
     </style>
 </head>
 <body>
@@ -2091,37 +2104,54 @@ $diet_plans_result = $conn->query($diet_plans_query);
             </div>
         </section>
 
-        <!-- Analytics Section -->
-        <section class="section <?php echo $current_page === 'analytics' ? 'active' : ''; ?>" id="analytics">
-            <h1 class="section-title">Analytics & Reports</h1>
+<!-- Analytics Section -->
+<section class="section <?php echo $current_page === 'analytics' ? 'active' : ''; ?>" id="analytics">
+    <h1 class="section-title">Analytics Dashboard</h1>
 
-            <!-- Charts Grid -->
-            <div class="chart-grid">
-                <!-- Monthly User Registrations -->
-                <div class="chart-container">
-                    <h3>Monthly User Registrations</h3>
+    <!-- Charts Grid - 4 equal boxes -->
+    <div class="row g-4">
+        <!-- Box 1: Monthly User Registrations -->
+        <div class="col-md-6 col-lg-3">
+            <div class="chart-box bg-white p-3 rounded shadow-sm h-100">
+                <h5 class="chart-title mb-3 text-center">User Registrations</h5>
+                <div class="chart-container" style="height: 200px;">
                     <canvas id="userRegChart"></canvas>
                 </div>
+            </div>
+        </div>
 
-                <!-- Monthly Revenue -->
-                <div class="chart-container">
-                    <h3>Monthly Revenue</h3>
+        <!-- Box 2: Monthly Revenue -->
+        <div class="col-md-6 col-lg-3">
+            <div class="chart-box bg-white p-3 rounded shadow-sm h-100">
+                <h5 class="chart-title mb-3 text-center">Monthly Revenue</h5>
+                <div class="chart-container" style="height: 200px;">
                     <canvas id="revenueChart"></canvas>
                 </div>
+            </div>
+        </div>
 
-                <!-- Diet Plan Usage -->
-                <div class="chart-container">
-                    <h3>Diet Plan Usage by Meal Type</h3>
+        <!-- Box 3: Diet Plan Usage -->
+        <div class="col-md-6 col-lg-3">
+            <div class="chart-box bg-white p-3 rounded shadow-sm h-100">
+                <h5 class="chart-title mb-3 text-center">Diet Plans</h5>
+                <div class="chart-container" style="height: 200px;">
                     <canvas id="dietUsageChart"></canvas>
                 </div>
+            </div>
+        </div>
 
-                <!-- Payment Statistics -->
-                <div class="chart-container">
-                    <h3>Payment Statistics</h3>
+        <!-- Box 4: Payment Statistics -->
+        <div class="col-md-6 col-lg-3">
+            <div class="chart-box bg-white p-3 rounded shadow-sm h-100">
+                <h5 class="chart-title mb-3 text-center">Payments</h5>
+                <div class="chart-container" style="height: 200px;">
                     <canvas id="paymentChart"></canvas>
                 </div>
             </div>
-        </section>
+        </div>
+    </div>
+</section>
+              
 
         <!-- Add Meal Modal -->
         <div class="modal fade" id="addMealModal" tabindex="-1">
@@ -2181,136 +2211,214 @@ $diet_plans_result = $conn->query($diet_plans_query);
         });
     });
 
-    // Analytics Charts
-    <?php if ($current_page === 'analytics'): ?>
-    // Monthly User Registrations Chart
-    const userRegCtx = document.getElementById('userRegChart').getContext('2d');
-    new Chart(userRegCtx, {
-        type: 'line',
-        data: {
-            labels: <?php 
-                $labels = [];
-                $data = [];
-                $monthly_reg->data_seek(0);
-                while($row = $monthly_reg->fetch_assoc()) {
-                    $labels[] = date('M Y', strtotime($row['month']));
-                    $data[] = $row['count'];
+// Analytics Charts with compact styling
+<?php if ($current_page === 'analytics'): ?>
+// Monthly User Registrations Chart
+const userRegCtx = document.getElementById('userRegChart').getContext('2d');
+new Chart(userRegCtx, {
+    type: 'line',
+    data: {
+        labels: <?php 
+            $labels = [];
+            $data = [];
+            $monthly_reg->data_seek(0);
+            while($row = $monthly_reg->fetch_assoc()) {
+                $labels[] = date('M Y', strtotime($row['month']));
+                $data[] = $row['count'];
+            }
+            echo json_encode($labels);
+        ?>,
+        datasets: [{
+            label: 'Users',
+            data: <?php echo json_encode($data); ?>,
+            borderColor: '#8B4513',
+            backgroundColor: 'rgba(139, 69, 19, 0.1)',
+            tension: 0.3,
+            borderWidth: 1.5,
+            pointRadius: 3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                    boxWidth: 12,
+                    padding: 8,
+                    font: {
+                        size: 10
+                    }
                 }
-                echo json_encode($labels);
-            ?>,
-            datasets: [{
-                label: 'New Users',
-                data: <?php echo json_encode($data); ?>,
-                borderColor: '#8B4513',
-                backgroundColor: 'rgba(139, 69, 19, 0.1)',
-                tension: 0.4
-            }]
+            }
         },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    font: {
+                        size: 9
+                    }
+                }
+            },
+            y: {
+                ticks: {
+                    font: {
+                        size: 9
+                    }
                 }
             }
         }
-    });
+    }
+});
 
-    // Monthly Revenue Chart
-    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-    new Chart(revenueCtx, {
-        type: 'bar',
-        data: {
-            labels: <?php 
-                $labels = [];
-                $data = [];
-                $monthly_revenue->data_seek(0);
-                while($row = $monthly_revenue->fetch_assoc()) {
-                    $labels[] = date('M Y', strtotime($row['month']));
-                    $data[] = $row['revenue'];
+// Monthly Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+new Chart(revenueCtx, {
+    type: 'bar',
+    data: {
+        labels: <?php 
+            $labels = [];
+            $data = [];
+            $monthly_revenue->data_seek(0);
+            while($row = $monthly_revenue->fetch_assoc()) {
+                $labels[] = date('M Y', strtotime($row['month']));
+                $data[] = $row['revenue'];
+            }
+            echo json_encode($labels);
+        ?>,
+        datasets: [{
+            label: 'Revenue (₹)',
+            data: <?php echo json_encode($data); ?>,
+            backgroundColor: 'rgba(139, 69, 19, 0.7)',
+            borderColor: '#8B4513',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                    boxWidth: 12,
+                    padding: 8,
+                    font: {
+                        size: 10
+                    }
                 }
-                echo json_encode($labels);
-            ?>,
-            datasets: [{
-                label: 'Revenue (₹)',
-                data: <?php echo json_encode($data); ?>,
-                backgroundColor: '#8B4513',
-                borderColor: '#8B4513',
-                borderWidth: 1
-            }]
+            }
         },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    font: {
+                        size: 9
+                    }
+                }
+            },
+            y: {
+                ticks: {
+                    font: {
+                        size: 9
+                    }
                 }
             }
         }
-    });
+    }
+});
 
-    // Diet Plan Usage Chart
-    const dietUsageCtx = document.getElementById('dietUsageChart').getContext('2d');
-    new Chart(dietUsageCtx, {
-        type: 'doughnut',
-        data: {
-            labels: <?php 
-                $labels = [];
-                $data = [];
-                $diet_usage->data_seek(0);
-                while($row = $diet_usage->fetch_assoc()) {
-                    $labels[] = ucfirst($row['meal_type']);
-                    $data[] = $row['usage_count'];
-                }
-                echo json_encode($labels);
-            ?>,
-            datasets: [{
-                data: <?php echo json_encode($data); ?>,
-                backgroundColor: [
-                    '#8B4513',
-                    '#DEB887',
-                    '#A0522D',
-                    '#CD853F'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
+// Diet Plan Usage Chart
+const dietUsageCtx = document.getElementById('dietUsageChart').getContext('2d');
+new Chart(dietUsageCtx, {
+    type: 'doughnut',
+    data: {
+        labels: <?php 
+            $labels = [];
+            $data = [];
+            $diet_usage->data_seek(0);
+            while($row = $diet_usage->fetch_assoc()) {
+                $labels[] = ucfirst($row['meal_type']);
+                $data[] = $row['usage_count'];
+            }
+            echo json_encode($labels);
+        ?>,
+        datasets: [{
+            data: <?php echo json_encode($data); ?>,
+            backgroundColor: [
+                '#8B4513',
+                '#DEB887',
+                '#A0522D',
+                '#CD853F'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    boxWidth: 10,
+                    padding: 8,
+                    font: {
+                        size: 9
+                    }
                 }
             }
         }
-    });
+    }
+});
 
-    // Payment Statistics Chart
-    const paymentCtx = document.getElementById('paymentChart').getContext('2d');
-    new Chart(paymentCtx, {
-        type: 'pie',
-        data: {
-            labels: ['Successful', 'Failed'],
-            datasets: [{
-                data: [
-                    <?php echo $payment_stats['successful_payments']; ?>,
-                    <?php echo $payment_stats['failed_payments']; ?>
-                ],
-                backgroundColor: [
-                    '#556B2F',
-                    '#8B0000'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
+// Payment Statistics Chart
+const paymentCtx = document.getElementById('paymentChart').getContext('2d');
+new Chart(paymentCtx, {
+    type: 'pie',
+    data: {
+        labels: ['Successful', 'Failed'],
+        datasets: [{
+            data: [
+                <?php echo $payment_stats['successful_payments']; ?>,
+                <?php echo $payment_stats['failed_payments']; ?>
+            ],
+            backgroundColor: [
+                'rgba(85, 107, 47, 0.7)',
+                'rgba(139, 0, 0, 0.7)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    boxWidth: 10,
+                    padding: 8,
+                    font: {
+                        size: 9
+                    }
                 }
             }
         }
-    });
-    <?php endif; ?>
+    }
+});
+<?php endif; ?>
+
 
     // Excel Export Function
     function exportToExcel() {
