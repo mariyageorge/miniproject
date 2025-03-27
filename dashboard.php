@@ -558,6 +558,16 @@ body {
                 <p>Plan your days effectively with smart scheduling and reminders ⏰</p>
                 <a href="calender.php" class="button">Plan Now</a>
             </div>
+
+            <div class="card">
+        <div class="icon-container">
+            <i class="icon fas fa-money-bill-split"></i>
+        </div>
+        <h2>Expense Splitter</h2>
+        <p>Split expenses with friends, family, or roommates and keep track of who owes what 💵</p>
+        <a href="expense_splitter.php" class="button">Split Bills</a>
+    </div>
+</div>
         </div>
     </div>
     <script>

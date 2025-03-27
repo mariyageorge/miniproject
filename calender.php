@@ -1,5 +1,3 @@
-
-
 <?php
 // Include necessary files
 include 'connect.php';
@@ -68,12 +66,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch events for the current user
 $events = [];
-$stmt = $conn->prepare("SELECT * FROM calendar_events WHERE user_id = ? ORDER BY event_date, event_time");
-$stmt->bind_param("i", $user_id);
+$current_date = date('Y-m-d');
+
+// Fetch upcoming events
+$stmt = $conn->prepare("SELECT * FROM calendar_events WHERE user_id = ? AND event_date >= ? ORDER BY event_date, event_time");
+$stmt->bind_param("is", $user_id, $current_date);
 $stmt->execute();
 $result = $stmt->get_result();
+$upcoming_events = [];
 while ($row = $result->fetch_assoc()) {
-    $events[] = $row;
+    $upcoming_events[] = $row;
+}
+
+// Fetch past events
+$stmt = $conn->prepare("SELECT * FROM calendar_events WHERE user_id = ? AND event_date < ? ORDER BY event_date DESC, event_time DESC");
+$stmt->bind_param("is", $user_id, $current_date);
+$stmt->execute();
+$result = $stmt->get_result();
+$past_events = [];
+while ($row = $result->fetch_assoc()) {
+    $past_events[] = $row;
 }
 ?>
 
@@ -221,6 +233,11 @@ while ($row = $result->fetch_assoc()) {
             background-color: #6d3611;
         }
         
+        .event-form button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
         .notification-btn {
             background-color: #8b4513;
             color: white;
@@ -254,6 +271,112 @@ while ($row = $result->fetch_assoc()) {
             background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+
+        .reminders-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #8b4513;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #8b4513;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            opacity: 1;
+            border-bottom: 3px solid #8b4513;
+            margin-bottom: -2px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .reminder-item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s ease;
+        }
+
+        .reminder-item:hover {
+            transform: translateX(5px);
+        }
+
+        .reminder-info {
+            flex-grow: 1;
+        }
+
+        .reminder-title {
+            font-weight: bold;
+            color: #8b4513;
+            margin-bottom: 5px;
+        }
+
+        .reminder-date {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .reminder-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .past-reminder {
+            opacity: 0.7;
+            background: #f5f5f5;
+        }
+
+        .no-reminders {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .reminder-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .badge-upcoming {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-past {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .today {
+            background-color: #ffd7d7;
+        }
+
+        .other-month {
+            background-color: #f0f0f0;
         }
     </style>
 </head>
@@ -306,25 +429,77 @@ while ($row = $result->fetch_assoc()) {
                 </div>
             <?php endif; ?>
 
-            <h3>Upcoming Reminders</h3>
-            <ul class="reminders-list" id="remindersList">
-                <?php foreach ($events as $event): ?>
-                    <li>
-                        <span><?php echo htmlspecialchars($event['event_title']); ?> - <?php echo date('M d, Y', strtotime($event['event_date'])); ?> at <?php echo date('h:i A', strtotime($event['event_time'])); ?></span>
-                        <div>
-                            <form method="POST" style="display:inline;">
-                                <input type="hidden" name="event_id" value="<?php echo $event['event_id']; ?>">
-                                <button type="submit" name="delete_event"><i class="fas fa-trash"></i></button>
-                            </form>
+            <div class="reminders-tabs">
+                <button class="tab-button active" onclick="showTab('upcoming')">Upcoming</button>
+                <button class="tab-button" onclick="showTab('history')">History</button>
+            </div>
+
+            <!-- Upcoming Reminders Tab -->
+            <div id="upcoming-tab" class="tab-content active">
+                <h3>Upcoming Reminders</h3>
+                <?php if (empty($upcoming_events)): ?>
+                    <div class="no-reminders">No upcoming reminders</div>
+                <?php else: ?>
+                    <?php foreach ($upcoming_events as $event): ?>
+                        <div class="reminder-item">
+                            <div class="reminder-info">
+                                <div class="reminder-title">
+                                    <?php echo htmlspecialchars($event['event_title']); ?>
+                                    <span class="reminder-badge badge-upcoming">Upcoming</span>
+                                </div>
+                                <div class="reminder-date">
+                                    <?php 
+                                        $event_date = new DateTime($event['event_date'] . ' ' . $event['event_time']);
+                                        echo $event_date->format('M d, Y \a\t h:i A'); 
+                                    ?>
+                                </div>
+                            </div>
+                            <div class="reminder-actions">
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="event_id" value="<?php echo $event['event_id']; ?>">
+                                    <button type="submit" name="delete_event" class="delete-btn">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                    </li>
-                <?php endforeach; ?>
-                
-                <?php if (empty($events)): ?>
-                    <li><span>No upcoming events. Add one below!</span></li>
+                    <?php endforeach; ?>
                 <?php endif; ?>
-            </ul>
-            
+            </div>
+
+            <!-- Reminder History Tab -->
+            <div id="history-tab" class="tab-content">
+                <h3>Reminder History</h3>
+                <?php if (empty($past_events)): ?>
+                    <div class="no-reminders">No past reminders</div>
+                <?php else: ?>
+                    <?php foreach ($past_events as $event): ?>
+                        <div class="reminder-item past-reminder">
+                            <div class="reminder-info">
+                                <div class="reminder-title">
+                                    <?php echo htmlspecialchars($event['event_title']); ?>
+                                    <span class="reminder-badge badge-past">Past</span>
+                                </div>
+                                <div class="reminder-date">
+                                    <?php 
+                                        $event_date = new DateTime($event['event_date'] . ' ' . $event['event_time']);
+                                        echo $event_date->format('M d, Y \a\t h:i A'); 
+                                    ?>
+                                </div>
+                            </div>
+                            <div class="reminder-actions">
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="event_id" value="<?php echo $event['event_id']; ?>">
+                                    <button type="submit" name="delete_event" class="delete-btn">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
             <h3>Add New Event</h3>
             <form method="POST" class="event-form">
                 <input type="date" name="event_date" required>
@@ -336,7 +511,8 @@ while ($row = $result->fetch_assoc()) {
     </div>
 
     <script>
-        let currentDate = new Date(2025, 1); // February 2025
+        // Initialize with current date instead of February 2025
+        let currentDate = new Date();
 
         function renderCalendar() {
             const calendarBody = document.getElementById('calendarBody');
@@ -345,6 +521,7 @@ while ($row = $result->fetch_assoc()) {
             const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
             const startDay = firstDay.getDay();
             const endDate = lastDay.getDate();
+            const today = new Date();
 
             currentMonth.textContent = `${firstDay.toLocaleString('default', { month: 'long' })} ${firstDay.getFullYear()}`;
             calendarBody.innerHTML = '';
@@ -356,10 +533,26 @@ while ($row = $result->fetch_assoc()) {
                     const cell = document.createElement('td');
                     if (i === 0 && j < startDay) {
                         cell.textContent = '';
+                        cell.classList.add('other-month');
                     } else if (date > endDate) {
                         cell.textContent = '';
+                        cell.classList.add('other-month');
                     } else {
                         cell.textContent = date;
+                        
+                        // Highlight current day
+                        if (date === today.getDate() && 
+                            currentDate.getMonth() === today.getMonth() && 
+                            currentDate.getFullYear() === today.getFullYear()) {
+                            cell.classList.add('today');
+                        }
+
+                        // Add click event
+                        cell.addEventListener('click', () => {
+                            const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), date);
+                            selectDate(clickedDate, cell);
+                        });
+
                         date++;
                     }
                     row.appendChild(cell);
@@ -390,6 +583,20 @@ while ($row = $result->fetch_assoc()) {
         }
 
         renderCalendar();
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            document.querySelector(`button[onclick="showTab('${tabName}')"]`).classList.add('active');
+        }
     </script>
 </body>
 </html>

@@ -40,7 +40,68 @@ if (!mysqli_query($conn, $sql)) {
     echo "Error creating table: " . mysqli_error($conn);
 }
 
+// Create expense_groups table if not exists
+$sql = "CREATE TABLE IF NOT EXISTS expense_groups (
+    group_id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    group_name VARCHAR(100) NOT NULL,
+    created_by INT(6) UNSIGNED,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE CASCADE
+)";
 
+if (!mysqli_query($conn, $sql)) {
+    echo "Error creating groups table: " . mysqli_error($conn);
+}
+
+// Create group_members table if not exists
+$sql = "CREATE TABLE IF NOT EXISTS group_members (
+    group_id INT(6) UNSIGNED,
+    user_id INT(6) UNSIGNED,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (group_id, user_id),
+    FOREIGN KEY (group_id) REFERENCES expense_groups(group_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+)";
+
+if (!mysqli_query($conn, $sql)) {
+    echo "Error creating group members table: " . mysqli_error($conn);
+}
+
+// Create split_expenses table if not exists
+$sql = "CREATE TABLE IF NOT EXISTS split_expenses (
+    split_id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    group_id INT(6) UNSIGNED,
+    expense_id INT(6) UNSIGNED,
+    paid_by INT(6) UNSIGNED,
+    amount DECIMAL(10,2) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES expense_groups(group_id) ON DELETE CASCADE,
+    FOREIGN KEY (paid_by) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (expense_id) REFERENCES expenses(expense_id) ON DELETE CASCADE
+)";
+
+if (!mysqli_query($conn, $sql)) {
+    echo "Error creating split expenses table: " . mysqli_error($conn);
+}
+
+// Create expense_shares table if not exists
+$sql = "CREATE TABLE IF NOT EXISTS expense_shares (
+    share_id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    split_id INT(6) UNSIGNED,
+    user_id INT(6) UNSIGNED,
+    amount DECIMAL(10,2) NOT NULL,
+    status ENUM('pending', 'settled') DEFAULT 'pending',
+    settled_at TIMESTAMP NULL,
+    FOREIGN KEY (split_id) REFERENCES split_expenses(split_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+)";
+
+if (!mysqli_query($conn, $sql)) {
+    echo "Error creating expense shares table: " . mysqli_error($conn);
+}
 
 // Handle expense submission
 if (isset($_POST['add_expense'])) {
@@ -60,8 +121,9 @@ if (isset($_POST['add_expense'])) {
         if ($stmt) {
             mysqli_stmt_bind_param($stmt, "idsss", $user_id, $amount, $description, $category, $date);
             
-            if (!mysqli_stmt_execute($stmt)) {
-               
+            if (mysqli_stmt_execute($stmt)) {
+                echo "<script>alert('Expense added successfully!'); window.location.href = 'expense.php';</script>";
+            } else {
                 echo "<script>alert('Error adding expense: " . mysqli_error($conn) . "');</script>";
             }
             mysqli_stmt_close($stmt);
@@ -70,8 +132,6 @@ if (isset($_POST['add_expense'])) {
         }
     }
 }
-
-
 
 // Handle monthly limit setting
 if (isset($_POST['set_limit'])) {
@@ -160,7 +220,6 @@ $stmt = mysqli_prepare($conn, $category_summary_sql);
 mysqli_stmt_bind_param($stmt, 'iii', $user_id, $month, $year);
 mysqli_stmt_execute($stmt);
 $category_summary = mysqli_stmt_get_result($stmt);
-
 
 // NEW CODE: Get data for charts
 // Weekly data for current month
@@ -381,12 +440,10 @@ if (isset($_POST['delete_expense'])) {
     header {
         background-color: var(--brown-primary);
         color: var(--text-light);
-        padding: 20px;
-        border-radius: 12px;
+        padding: 20px;   
         margin-bottom: 30px;
         background-image: linear-gradient(135deg, var(--brown-primary), var(--brown-hover));
         box-shadow: 0 6px 12px var(--shadow-color);
-        border-bottom: 3px solid var(--accent-gold);
         position: relative;
         overflow: hidden;
     }

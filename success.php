@@ -5,6 +5,261 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 include 'header.php'; 
+
+// Handle receipt view
+if (isset($_POST['view_receipt'])) {
+    $receipt_no = 'LSP-' . date('Ymd') . '-' . rand(1000, 9999);
+    $date = date('F d, Y');
+    
+    // Output receipt HTML
+    echo '<!DOCTYPE html>
+    <html>
+    <head>
+        <title>LifeSync Premium Receipt</title>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+        <style>
+            body { 
+                font-family: "Segoe UI", Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                background-color: #f5f5f5;
+                margin: 0;
+                padding: 20px;
+            }
+            .receipt-container {
+                max-width: 800px;
+                margin: 20px auto;
+                background: #fff;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }
+            .receipt-header {
+                background: #fff;
+                padding: 30px;
+                border-bottom: 2px solid #8b4513;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .logo-icon {
+                color: #FF9800;
+                font-size: 32px;
+            }
+            .brand {
+                flex-grow: 1;
+            }
+            .brand-name {
+                font-size: 28px;
+                color: #8b4513;
+                margin: 0;
+                font-weight: 600;
+            }
+            .receipt-label {
+                color: #666;
+                font-size: 16px;
+                margin: 5px 0 0 0;
+            }
+            .receipt-body {
+                padding: 30px;
+            }
+            .receipt-info {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 30px;
+                gap: 20px;
+            }
+            .info-block {
+                background: #f8f8f8;
+                padding: 20px;
+                border-radius: 8px;
+                border-left: 4px solid #8b4513;
+            }
+            .info-block p {
+                margin: 5px 0;
+            }
+            .success-badge {
+                display: inline-block;
+                background: #4CAF50;
+                color: white;
+                padding: 5px 15px;
+                border-radius: 15px;
+                font-size: 14px;
+                margin-top: 10px;
+            }
+            .success-badge i {
+                margin-right: 5px;
+            }
+            .receipt-table {
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 0;
+                margin: 20px 0;
+            }
+            .receipt-table th {
+                background: #8b4513;
+                color: white;
+                padding: 15px;
+                text-align: left;
+            }
+            .receipt-table td {
+                padding: 15px;
+                border-bottom: 1px solid #eee;
+            }
+            .receipt-table tr:last-child td {
+                border-bottom: none;
+                background: #f8f8f8;
+                font-weight: bold;
+            }
+            .amount-col {
+                text-align: right;
+            }
+            .receipt-footer {
+                text-align: center;
+                padding: 30px;
+                background: #f8f8f8;
+                border-top: 1px solid #eee;
+            }
+            .thank-you {
+                color: #8b4513;
+                font-size: 18px;
+                margin-bottom: 10px;
+            }
+            .footer-note {
+                color: #666;
+                font-size: 14px;
+            }
+            .actions {
+                margin-top: 20px;
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+            }
+            .action-btn {
+                background: #8b4513;
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.3s ease;
+            }
+            .action-btn:hover {
+                background: #6d3611;
+            }
+            .action-btn.secondary {
+                background: #666;
+            }
+            .action-btn.secondary:hover {
+                background: #555;
+            }
+            @media print {
+                .actions { display: none; }
+                body { background: white; }
+                .receipt-container { box-shadow: none; }
+            }
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    </head>
+    <body>
+        <div class="receipt-container" id="receipt">
+            <div class="receipt-header">
+                <div class="logo-icon">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <div class="brand">
+                    <h1 class="brand-name">LifeSync Premium</h1>
+                    <p class="receipt-label">Payment Receipt</p>
+                </div>
+            </div>
+            
+            <div class="receipt-body">
+                <div class="receipt-info">
+                    <div class="info-block">
+                        <p><strong>Receipt No:</strong> ' . $receipt_no . '</p>
+                        <p><strong>Date:</strong> ' . $date . '</p>
+                        <div class="success-badge">
+                            <i class="fas fa-check-circle"></i> Payment Successful
+                        </div>
+                    </div>
+                    <div class="info-block">
+                        <p><strong>Customer Information</strong></p>
+                        <p><i class="fas fa-user"></i> ' . htmlspecialchars($_SESSION['username']) . '</p>
+                        <p><i class="fas fa-crown"></i> Premium Member</p>
+                    </div>
+                </div>
+
+                <table class="receipt-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="amount-col">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>LifeSync Premium Subscription</strong><br>
+                                <span style="color: #666;">1 Year Access to Premium Features</span>
+                            </td>
+                            <td class="amount-col">$99.99</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total</strong></td>
+                            <td class="amount-col"><strong>$99.99</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="receipt-footer">
+                <div class="thank-you">Thank you for choosing LifeSync Premium!</div>
+                <div class="footer-note">
+                    This is a computer-generated receipt and requires no signature.<br>
+                    For support, contact us at support@lifesync.com
+                </div>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button onclick="downloadPDF()" class="action-btn">
+                <i class="fas fa-download"></i> Download PDF
+            </button>
+            <button onclick="window.close()" class="action-btn secondary">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+
+        <script>
+            function downloadPDF() {
+                const element = document.getElementById("receipt");
+                const opt = {
+                    margin: 0.5,
+                    filename: "LifeSync_Receipt_' . $receipt_no . '.pdf",
+                    image: { type: "jpeg", quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+                };
+
+                // Hide buttons during PDF generation
+                document.querySelector(".actions").style.display = "none";
+                
+                html2pdf().set(opt).from(element).save().then(function() {
+                    // Show buttons after PDF is generated
+                    document.querySelector(".actions").style.display = "flex";
+                });
+            }
+
+            document.title = "LifeSync_Receipt_' . $receipt_no . '";
+        </script>
+    </body>
+    </html>';
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -134,6 +389,33 @@ include 'header.php';
             color: var(--text-secondary);
             font-size: 0.9rem;
         }
+        
+        .receipt-btn {
+            background-color: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+            text-decoration: none;
+        }
+        
+        .receipt-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0px 6px 15px rgba(93, 64, 55, 0.3);
+        }
+
+        .buttons-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -148,10 +430,15 @@ include 'header.php';
             <div class="premium-badge">
                 <i class="fas fa-crown"></i> Premium Member
             </div>
-            <div class="mt-4">
-                <a href="dashboard.php" class="btn dashboard-btn mt-3">
+            <div class="buttons-container">
+                <a href="dashboard.php" class="btn dashboard-btn">
                     <i class="fas fa-home me-2"></i>Go to Dashboard
                 </a>
+                <form method="POST" style="display: inline;" target="_blank">
+                    <button type="submit" name="view_receipt" class="btn receipt-btn">
+                        <i class="fas fa-file-pdf me-2"></i>Download Receipt
+                    </button>
+                </form>
             </div>
             <p class="thank-you-msg">We appreciate your trust in LifeSync!</p>
             

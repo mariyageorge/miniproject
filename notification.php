@@ -1,8 +1,10 @@
 <?php
-// Include database connection and session handling
-include 'connect.php';
-include 'header.php';
+// Start session before any output
 session_start();
+
+// Include database connection and header
+require_once 'connect.php';
+require_once 'header.php';
 
 // Redirect if user is not logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,12 +12,17 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Ensure we have a valid database connection
+if (!isset($conn) || $conn->connect_error) {
+    die("Connection failed: " . ($conn->connect_error ?? "Database connection not established"));
+}
+
 $user_id = $_SESSION['user_id'];
 
 // Set timezone
 date_default_timezone_set('Asia/Kolkata'); // Change to your timezone
 
-// Ensure notifications table exists
+// Ensure notifications table exists with proper error handling
 $createTableQuery = "
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,11 +35,40 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB";
 
-$conn->query($createTableQuery) or die("Error creating notifications table: " . $conn->error);
+if (!$conn->query($createTableQuery)) {
+    die("Error creating notifications table: " . $conn->error);
+}
 
-// AJAX request handling
+// AJAX request handling with improved error handling
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
+    
+    // Handle clear all notifications request with better error handling
+    if (isset($_POST['clear_all'])) {
+        try {
+            $clear_sql = "DELETE FROM notifications WHERE user_id = ?";
+            $clear_stmt = $conn->prepare($clear_sql);
+            
+            if (!$clear_stmt) {
+                throw new Exception("Failed to prepare clear statement: " . $conn->error);
+            }
+            
+            if (!$clear_stmt->bind_param("i", $user_id)) {
+                throw new Exception("Failed to bind parameters: " . $clear_stmt->error);
+            }
+            
+            if (!$clear_stmt->execute()) {
+                throw new Exception("Failed to execute clear statement: " . $clear_stmt->error);
+            }
+            
+            echo json_encode(['success' => true]);
+            exit;
+        } catch (Exception $e) {
+            error_log("Clear notifications error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            exit;
+        }
+    }
     
     // Handle mark as read/unread requests
     if (isset($_POST['mark_read']) && isset($_POST['notification_id'])) {
@@ -51,6 +87,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         echo json_encode(['success' => false, 'error' => 'Failed to update notification']);
+        exit;
+    }
+    
+    // Handle delete notification request
+    if (isset($_POST['delete']) && isset($_POST['notification_id'])) {
+        $notification_id = intval($_POST['notification_id']);
+        
+        $delete_sql = "DELETE FROM notifications WHERE id = ? AND user_id = ?";
+        $delete_stmt = $conn->prepare($delete_sql);
+        
+        if ($delete_stmt) {
+            $delete_stmt->bind_param("ii", $notification_id, $user_id);
+            if ($delete_stmt->execute()) {
+                echo json_encode(['success' => true]);
+                exit;
+            }
+        }
+        
+        echo json_encode(['success' => false, 'error' => 'Failed to delete notification']);
         exit;
     }
     
@@ -267,6 +322,30 @@ $notifications_json = json_encode($all_notifications);
             display: flex;
             gap: 10px;
         }
+        .clear-all-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        .clear-all-btn:hover {
+            background: #c82333;
+        }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 3px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+        }
         .notification.event-started {
             animation: pulse 2s infinite;
             background: #ffe8e8;
@@ -287,6 +366,11 @@ $notifications_json = json_encode($all_notifications);
         <div class="notification-header">
             <div>
                 <h2>Notifications <span id="notificationCount" class="notification-badge"><?php echo count($all_notifications); ?></span></h2>
+            </div>
+            <div class="notification-actions">
+                <?php if (!empty($all_notifications)): ?>
+                    <button id="clearAllBtn" class="clear-all-btn">Clear All</button>
+                <?php endif; ?>
             </div>
         </div>
         
@@ -335,6 +419,9 @@ $notifications_json = json_encode($all_notifications);
                                     Event started
                                 </button>
                             <?php endif; ?>
+                            <button class="delete-btn" data-id="<?php echo $notif['id']; ?>">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                         <?php echo htmlspecialchars($notif['message']); ?>
                         
@@ -455,6 +542,106 @@ $notifications_json = json_encode($all_notifications);
         // Update timers every second
         updateTimers();
         setInterval(updateTimers, 1000);
+
+        // Function to update notification count
+        function updateNotificationCount() {
+            const count = document.querySelectorAll('.notification').length;
+            const countBadge = document.getElementById('notificationCount');
+            const clearAllBtn = document.getElementById('clearAllBtn');
+            
+            if (countBadge) {
+                countBadge.textContent = count;
+            }
+            
+            if (count === 0) {
+                // Show empty state
+                document.getElementById('notificationContainer').innerHTML = `
+                    <div class="empty-state">
+                        <p>You have no notifications at this time.</p>
+                    </div>
+                `;
+                // Remove clear all button
+                if (clearAllBtn) {
+                    clearAllBtn.remove();
+                }
+            }
+        }
+
+        // Delete notification
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const notificationId = this.dataset.id;
+                const notification = this.closest('.notification');
+                
+                if (confirm('Are you sure you want to delete this notification?')) {
+                    fetch('notification.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `delete=1&notification_id=${notificationId}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            notification.remove();
+                            updateNotificationCount();
+                        } else {
+                            console.error('Error:', data.error);
+                            alert('Failed to delete notification');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to delete notification');
+                    });
+                }
+            });
+        });
+
+        // Clear all notifications
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                if (confirm('Are you sure you want to clear all notifications?')) {
+                    try {
+                        const response = await fetch('notification.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: 'clear_all=1'
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            document.querySelectorAll('.notification').forEach(notif => {
+                                notif.remove();
+                            });
+                            updateNotificationCount();
+                        } else {
+                            throw new Error(data.error || 'Failed to clear notifications');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert(`Failed to clear notifications: ${error.message}`);
+                        
+                        // Reload the page if there might be a session issue
+                        if (error.message.includes('session') || error.message.includes('login')) {
+                            window.location.reload();
+                        }
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>

@@ -487,79 +487,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             transform: scale(1.05);
         }
 
-        /* Premium features styling */
-        .premium-notice {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            color: #8B4513;
-        }
-
-        .premium-notice i {
-            font-size: 2em;
-            margin-bottom: 10px;
-            color: #8B4513;
-        }
-
-        .btn-premium {
-            background: #8B4513;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            display: inline-block;
-            margin-top: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-premium:hover {
-            background: #654321;
-            transform: scale(1.05);
-        }
-
-        .bmi-result {
-            margin-top: 20px;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .premium-results {
-            margin-top: 20px;
-            padding: 15px;
-            background: #FFF8DC;
-            border-radius: 8px;
-            border-left: 4px solid #FFD700;
-        }
-
-        .premium-teaser {
-            margin-top: 20px;
-            padding: 15px;
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            border-radius: 8px;
-            color: #8B4513;
-        }
-
-        .premium-teaser ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .premium-teaser li {
-            margin: 8px 0;
-            padding-left: 20px;
-            position: relative;
-        }
-
-        .premium-teaser li:before {
-            content: '✨';
-            position: absolute;
-            left: 0;
-        }
-
+    
         .recommendations {
             margin-top: 15px;
         }
@@ -976,86 +904,6 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             transform: scale(1.05);
         }
 
-        /* Premium Prompt Styles */
-        .premium-prompt {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .premium-content {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .premium-icon {
-            font-size: 3em;
-            margin-bottom: 20px;
-        }
-
-        .premium-prompt h2 {
-            color: var(--primary-brown);
-            margin-bottom: 20px;
-            font-size: 1.8em;
-        }
-
-        .premium-features {
-            list-style: none;
-            padding: 0;
-            margin: 25px 0;
-            text-align: left;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .premium-features li {
-            margin: 15px 0;
-            font-size: 1.1em;
-            color: var(--dark-brown);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .premium-price {
-            margin: 30px 0;
-        }
-
-        .premium-price .price {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: var(--primary-brown);
-        }
-
-        .premium-price .period {
-            color: var(--dark-brown);
-            font-size: 1.2em;
-        }
-
-        .premium-btn {
-            display: inline-block;
-            padding: 15px 40px;
-            background: var(--primary-brown);
-            color: white;
-            text-decoration: none;
-            border-radius: 25px;
-            font-size: 1.2em;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-
-        .premium-btn:hover {
-            background: var(--dark-brown);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
         .meal-planner-grid {
             max-width: 600px;
             margin: 0 auto;
@@ -1133,6 +981,228 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             background: #ffe6e6;
             border-radius: 10px;
             margin: 20px 0;
+        }
+
+        /* Updated Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+            overflow-y: auto; /* Enable scrolling */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: var(--cream);
+            margin: 3% auto;
+            padding: 40px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 700px;
+            position: relative;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.2);
+            animation: slideIn 0.4s ease;
+            max-height: 90vh; /* Maximum height */
+            overflow-y: auto; /* Enable scrolling for content */
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 25px;
+            top: 20px;
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary-brown);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .close-modal:hover {
+            background-color: var(--primary-brown);
+            color: white;
+        }
+
+        .bmi-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .bmi-header h3 {
+            color: var(--primary-brown);
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .result-card {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 15px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .main-result {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, var(--cream), white);
+        }
+
+        .bmi-value {
+            font-size: 3.5em;
+            font-weight: bold;
+            color: var(--primary-brown);
+            margin: 15px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .bmi-category {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin: 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .category-underweight { 
+            background: linear-gradient(135deg, #FFE0B2, #FFCC80);
+            color: #E65100;
+        }
+        .category-normal { 
+            background: linear-gradient(135deg, #C8E6C9, #A5D6A7);
+            color: #2E7D32;
+        }
+        .category-overweight { 
+            background: linear-gradient(135deg, #FFECB3, #FFE082);
+            color: #FF6F00;
+        }
+        .category-obese { 
+            background: linear-gradient(135deg, #FFCDD2, #EF9A9A);
+            color: #C62828;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .metric-item {
+            background: var(--cream);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .metric-label {
+            color: var(--dark-brown);
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: var(--primary-brown);
+        }
+
+        .recommendations-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .recommendations-list li {
+            padding: 15px;
+            margin: 10px 0;
+            background: var(--cream);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-green);
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        .recommendations-list li:hover {
+            transform: translateX(5px);
+        }
+
+        .recommendations-list li::before {
+            content: '👉';
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .info-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-brown);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-size: 14px;
+            margin-left: 5px;
+            cursor: help;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--dark-brown);
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.9em;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
         }
     </style>
     <script>
@@ -1280,37 +1350,48 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
                     body: formData
                 });
                 
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
                 const data = await response.json();
                 if (data.error) {
-                    alert(data.error);
-                    return;
+                    throw new Error(data.error);
                 }
                 
-                // Display basic results
-                document.getElementById('bmiValue').textContent = data.bmi;
-                document.getElementById('bmiCategory').textContent = data.basic_category;
-                
-                // Display premium results if available
-                if (data.premium_data) {
-                    document.getElementById('adjustedBmi').textContent = data.premium_data.age_adjusted_bmi;
-                    document.getElementById('idealWeight').textContent = 
-                        `${data.premium_data.ideal_weight_range.min} - ${data.premium_data.ideal_weight_range.max} kg`;
-                    document.getElementById('dailyCalories').textContent = 
-                        `${data.premium_data.daily_calories} calories`;
-                    document.getElementById('bodyFat').textContent = 
-                        `${data.premium_data.body_fat_estimate}%`;
-                    
-                    // Display recommendations
-                    const recsDiv = document.getElementById('recommendations');
-                    recsDiv.innerHTML = '<h5>Personalized Recommendations:</h5><ul>' +
-                        data.premium_data.detailed_recommendation.map(rec => `<li>${rec}</li>`).join('') +
-                        '</ul>';
-                }
-                
-                document.getElementById('bmiResult').style.display = 'block';
+                const modal = document.getElementById('bmiModal');
+                const bmiScore = document.querySelector('.bmi-score');
+                const bmiCategory = document.querySelector('.bmi-category');
+                const ageAdjustedBMI = document.querySelector('.age-adjusted-bmi .metric-value');
+                const idealWeight = document.querySelector('.ideal-weight-range .metric-value');
+                const dailyCalories = document.querySelector('.daily-calorie-needs .metric-value');
+                const bodyFat = document.querySelector('.estimated-body-fat .metric-value');
+                const recommendations = document.querySelector('.recommendations-list');
+
+                // Update BMI Score and Category
+                bmiScore.textContent = data.bmi.toFixed(1);
+                bmiCategory.textContent = data.category;
+                bmiCategory.className = 'bmi-category category-' + data.category.toLowerCase().replace(' ', '-');
+
+                // Update Detailed Metrics
+                ageAdjustedBMI.textContent = data.age_adjusted_bmi.toFixed(1);
+                idealWeight.textContent = `${data.ideal_weight_range.min.toFixed(1)} - ${data.ideal_weight_range.max.toFixed(1)} kg`;
+                dailyCalories.textContent = `${data.daily_calories} kcal`;
+                bodyFat.textContent = `${data.body_fat.toFixed(1)}%`;
+
+                // Update Recommendations
+                recommendations.innerHTML = '';
+                data.recommendations.forEach(rec => {
+                    const li = document.createElement('li');
+                    li.textContent = rec;
+                    recommendations.appendChild(li);
+                });
+
+                // Show modal
+                modal.style.display = 'block';
             } catch (error) {
-                alert('Error calculating BMI. Please try again.');
-                console.error(error);
+                console.error('Error:', error);
+                alert('Error calculating BMI: ' + error.message);
             }
         }
 
@@ -1775,6 +1856,29 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
                 document.getElementById('waterChart').innerHTML = 'No water intake data available';
             }
         }
+
+        // Add modal close functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('bmiModal');
+            const closeBtn = document.querySelector('.close-modal');
+
+            // Close modal when clicking the close button
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+
+            // Close modal when clicking outside
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Prevent modal from closing when clicking inside modal content
+            modal.querySelector('.modal-content').addEventListener('click', function(event) {
+                event.stopPropagation();
+            });
+        });
     </script>
 </head>
 <body>
@@ -1789,7 +1893,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             <li><a href="#" class="menu-item" data-section="exercise"><i>🏃‍♂️</i>Exercise</a></li>
             <li><a href="#" class="menu-item" data-section="advanced-analytics"><i>📊</i>Analytics</a></li>
             <li><a href="#" class="menu-item" data-section="meal-planner"><i>📅</i>Meal Planner</a></li>
-           
+            
             <li><a href="#" class="menu-item" data-section="profile"><i>👤</i> Health Profile</a></li>
         </ul>
     </div>
@@ -1863,35 +1967,8 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
                     </div>
                     <button type="submit" class="calculate-btn">Calculate BMI</button>
                 </form>
-                <div id="bmiResult" class="bmi-result" style="display: none;">
-                    <h4>Your Results</h4>
-                    <p>BMI: <span id="bmiValue"></span></p>
-                    <p>Category: <span id="bmiCategory"></span></p>
-                    <?php if ($role === 'premium user'): ?>
-                    <div class="premium-results">
-                        <h5>Premium Insights</h5>
-                        <p>Age-Adjusted BMI: <span id="adjustedBmi"></span></p>
-                        <p>Ideal Weight Range: <span id="idealWeight"></span></p>
-                        <p>Daily Calorie Needs: <span id="dailyCalories"></span></p>
-                        <p>Estimated Body Fat: <span id="bodyFat"></span></p>
-                        <div id="recommendations"></div>
-                    </div>
-                    <?php else: ?>
-                    <div class="premium-teaser">
-                        <h5>🌟 Unlock Premium Features</h5>
-                        <ul>
-                            <li>Age-adjusted BMI calculation</li>
-                            <li>Personalized ideal weight range</li>
-                            <li>Daily calorie needs calculation</li>
-                            <li>Body fat percentage estimate</li>
-                            <li>Detailed health recommendations</li>
-                        </ul>
-                        <a href="upgrade.php" class="btn-premium">Upgrade Now</a>
-                    </div>
-                <?php endif; ?>
-        </div>
-    </div>
-    
+            </div>
+            
     <!-- Meal Tracking Section -->
         <div class="section" id="meal-section">
             <h3>🍽️ Meal Tracking</h3>
@@ -2020,28 +2097,20 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
                         <div id="waterChart" class="chart-container"></div>
                     </div>
                 </div>
-            <?php else: ?>
-                <!-- Premium Subscription Prompt -->
-                <div class="premium-prompt">
-                    <div class="premium-content">
-                        <div class="premium-icon">⭐</div>
-                        <h2>Unlock Advanced Analytics</h2>
-                        <p>Subscribe to Premium to access detailed health insights:</p>
-                        <ul class="premium-features">
-                            <li>🔍 Detailed progress tracking</li>
-                            <li>📊 Comprehensive health reports</li>
-                            <li>📈 Trend analysis and predictions</li>
-                            <li>🎯 Personalized health recommendations</li>
-                            <li>📱 Export reports and data</li>
-                    </ul>
-                        <div class="premium-price">
-                            <span class="price">Rs.199</span>
-                            <span class="period">/month</span>
-                </div>
-                        <a href="upgrade.php" class="premium-btn">Upgrade to Premium</a>
-                    </div>
-                </div>
-            <?php endif; ?>
+                <?php else: ?>
+                        <div class="text-center py-5">
+                            <i class="fas fa-crown fa-3x text-warning mb-3"></i>
+                            <h4>Premium Feature</h4>
+                            <p>This feature is only available for premium users.</p>
+                            <p>Upgrade now to access advanced health summaries!</p>
+                            <a href="upgrade.php" class="btn btn-primary" 
+   style="background-color: var(--primary-brown); color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; border: 2px solid var(--primary-brown); transition: background-color 0.3s ease, border-color 0.3s ease;"
+   onmouseover="this.style.backgroundColor='#654321'; this.style.borderColor='#654321';" 
+   onmouseout="this.style.backgroundColor='var(--primary-brown)'; this.style.borderColor='var(--primary-brown)';">
+    <i class="fas fa-arrow-up"></i> Upgrade to Premium
+</a>
+                        </div>
+                        <?php endif; ?>
             </div>
             
         <!-- Meal Planner Section -->
@@ -2119,6 +2188,78 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             ?>
         </div>
     </div>
+    </div>
+
+    <!-- Updated BMI Results Modal -->
+    <div id="bmiModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            
+            <div class="bmi-header">
+                <h3>Your BMI Results</h3>
+                <p>Based on your height, weight, age, and gender</p>
+            </div>
+            
+            <div class="result-card main-result">
+                <h4>Your BMI Score</h4>
+                <div class="bmi-value"><span class="bmi-score"></span></div>
+                <div class="bmi-category"></div>
+            </div>
+
+            <div class="result-card">
+                <h4>Detailed Health Metrics</h4>
+                <div class="metrics-grid">
+                    <div class="metric-item age-adjusted-bmi">
+                        <div class="metric-label">
+                            Age-Adjusted BMI
+                            <span class="tooltip">
+                                <span class="info-icon">i</span>
+                                <span class="tooltip-text">BMI adjusted for your age to provide a more accurate assessment</span>
+                            </span>
+                        </div>
+                        <div class="metric-value"></div>
+                    </div>
+                    
+                    <div class="metric-item ideal-weight-range">
+                        <div class="metric-label">
+                            Ideal Weight Range
+                            <span class="tooltip">
+                                <span class="info-icon">i</span>
+                                <span class="tooltip-text">Healthy weight range based on your height and body structure</span>
+                            </span>
+                        </div>
+                        <div class="metric-value"></div>
+                    </div>
+                    
+                    <div class="metric-item daily-calorie-needs">
+                        <div class="metric-label">
+                            Daily Calorie Needs
+                            <span class="tooltip">
+                                <span class="info-icon">i</span>
+                                <span class="tooltip-text">Recommended daily calorie intake for maintaining current weight</span>
+                            </span>
+                        </div>
+                        <div class="metric-value"></div>
+                    </div>
+                    
+                    <div class="metric-item estimated-body-fat">
+                        <div class="metric-label">
+                            Estimated Body Fat
+                            <span class="tooltip">
+                                <span class="info-icon">i</span>
+                                <span class="tooltip-text">Approximate body fat percentage based on BMI and other factors</span>
+                            </span>
+                        </div>
+                        <div class="metric-value"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <h4>Your Personalized Health Recommendations</h4>
+                <ul class="recommendations-list"></ul>
+            </div>
+        </div>
     </div>
 </body>
 </html>

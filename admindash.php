@@ -1208,29 +1208,57 @@ $diet_plans_result = $conn->query($diet_plans_query);
 
         /* Analytics Section Styles */
         .chart-grid {
-            display: grid;
             grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
             gap: 2rem;
             margin-top: 2rem;
         }
 
-        .chart-container {
-            background-color: var(--card-bg);
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        /* Reports Section Styles */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
 
-        .chart-container h3 {
-            color: var(--text-primary);
-            margin-bottom: 1.5rem;
-            font-size: 1.2rem;
-            font-weight: 600;
+        .btn-download, .btn-export {
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
         }
 
-        @media (max-width: 1200px) {
-            .chart-grid {
-                grid-template-columns: 1fr;
+        .btn-download {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-export {
+            background-color: #1f7244;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background-color: var(--accent-color);
+        }
+
+        .btn-export:hover {
+            background-color: #155724;
+        }
+
+        @media print {
+            .sidebar, .welcome-header, .search-filters-card, .action-buttons {
+                display: none !important;
+            }
+            .main-content {
+                margin-left: 0 !important;
+                padding: 0 !important;
+            }
+            .dashboard-section {
+                box-shadow: none !important;
             }
         }
     </style>
@@ -1285,8 +1313,8 @@ $diet_plans_result = $conn->query($diet_plans_query);
                 </a>
             </li>
             <li class="nav-item">
-                <a href="reports.php" class="nav-link <?php echo $current_page === 'analytics' ? 'active' : ''; ?>">
-                    <i class="fas fa-chart-bar"></i>
+                <a href="?page=reports" class="nav-link <?php echo $current_page === 'reports' ? 'active' : ''; ?>">
+                    <i class="fas fa-file-alt"></i>
                     <span>Reports</span>
                 </a>
             </li>
@@ -1898,6 +1926,171 @@ $diet_plans_result = $conn->query($diet_plans_query);
             </div>
         </section>
 
+        <!-- Reports Section -->
+        <section class="section <?php echo $current_page === 'reports' ? 'active' : ''; ?>" id="reports">
+            <h1 class="section-title">Reports</h1>
+
+            <!-- Report Filters -->
+            <div class="search-filters-card">
+                <form method="POST" class="filter-form">
+                    <div class="form-group">
+                        <label for="report_type">Report Type</label>
+                        <select name="report_type" id="report_type" class="filter-input" required>
+                            <option value="">Select Report Type</option>
+                            <option value="user_summary">User Summary</option>
+                            <option value="payment_summary">Payment Summary</option>
+                            <option value="all_reports">Combined Summary</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" class="filter-input" value="<?php echo date('Y-m-d', strtotime('-30 days')); ?>" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end_date">End Date</label>
+                        <input type="date" id="end_date" name="end_date" class="filter-input" value="<?php echo date('Y-m-d'); ?>" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" name="generate_report" class="filter-btn">
+                            <i class="fas fa-file-alt me-2"></i> Generate Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Report Results -->
+            <div class="dashboard-section">
+                <?php if (isset($_POST['generate_report'])): ?>
+                    <?php
+                    $report_type = $_POST['report_type'];
+                    $start_date = $_POST['start_date'];
+                    $end_date = $_POST['end_date'];
+                    $report_data = [];
+                    $summary_stats = [];
+
+                    switch($report_type) {
+                        case 'user_summary':
+                            $query = "SELECT role, COUNT(*) as total_users,
+                                     DATE_FORMAT(MIN(created_at), '%Y-%m-%d') as earliest_registration,
+                                     DATE_FORMAT(MAX(created_at), '%Y-%m-%d') as latest_registration
+                                     FROM users 
+                                     WHERE created_at BETWEEN ? AND ?
+                                     GROUP BY role";
+                            $stmt = $conn->prepare($query);
+                            $stmt->bind_param("ss", $start_date, $end_date);
+                            $stmt->execute();
+                            $result = $stmt->get_result();
+                            while ($row = $result->fetch_assoc()) {
+                                $report_data[] = $row;
+                            }
+                            break;
+
+                        case 'payment_summary':
+                            $query = "SELECT 
+                                     DATE_FORMAT(payment_date, '%Y-%m') as month,
+                                     COUNT(*) as total_transactions,
+                                     SUM(CASE WHEN status = 'success' THEN amount ELSE 0 END) as total_revenue,
+                                     COUNT(CASE WHEN status = 'success' THEN 1 END) as successful_payments,
+                                     COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_payments
+                                     FROM payments 
+                                     WHERE payment_date BETWEEN ? AND ?
+                                     GROUP BY DATE_FORMAT(payment_date, '%Y-%m')";
+                            $stmt = $conn->prepare($query);
+                            $stmt->bind_param("ss", $start_date, $end_date);
+                            $stmt->execute();
+                            $result = $stmt->get_result();
+                            while ($row = $result->fetch_assoc()) {
+                                $report_data[] = $row;
+                            }
+                            break;
+
+                        case 'all_reports':
+                            // User Statistics
+                            $user_query = "SELECT 
+                                          COUNT(*) as total_users,
+                                          COUNT(CASE WHEN role = 'premium user' THEN 1 END) as premium_users,
+                                          COUNT(CASE WHEN role = 'user' THEN 1 END) as standard_users
+                                          FROM users
+                                          WHERE created_at BETWEEN ? AND ?";
+                            $stmt = $conn->prepare($user_query);
+                            $stmt->bind_param("ss", $start_date, $end_date);
+                            $stmt->execute();
+                            $user_stats = $stmt->get_result()->fetch_assoc();
+                            
+                            // Payment Statistics
+                            $payment_query = "SELECT 
+                                            SUM(CASE WHEN status = 'success' THEN amount ELSE 0 END) as total_revenue,
+                                            COUNT(*) as total_transactions,
+                                            COUNT(CASE WHEN status = 'success' THEN 1 END) as successful_payments
+                                            FROM payments 
+                                            WHERE payment_date BETWEEN ? AND ?";
+                            $stmt = $conn->prepare($payment_query);
+                            $stmt->bind_param("ss", $start_date, $end_date);
+                            $stmt->execute();
+                            $payment_stats = $stmt->get_result()->fetch_assoc();
+                            
+                            $report_data = array_merge($user_stats, $payment_stats);
+                            break;
+                    }
+
+                    if (!empty($report_data) && count($report_data) > 0): ?>
+                        <div class="table-responsive">
+                            <div class="action-buttons mb-3">
+                                <button class="btn btn-download" onclick="window.print()">
+                                    <i class="fas fa-file-pdf me-2"></i>Download PDF
+                                </button>
+                                <button class="btn btn-export" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel me-2"></i>Export to Excel
+                                </button>
+                            </div>
+                            <table class="users-table" id="reportTable">
+                                <thead>
+                                    <tr>
+                                        <?php 
+                                        $first_row = reset($report_data);
+                                        if ($first_row):
+                                            foreach (array_keys($first_row) as $header): 
+                                        ?>
+                                            <th><?php echo ucwords(str_replace('_', ' ', $header)); ?></th>
+                                        <?php 
+                                            endforeach;
+                                        endif;
+                                        ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($report_data as $row): ?>
+                                        <tr>
+                                            <?php foreach ($row as $value): ?>
+                                                <td><?php echo htmlspecialchars($value ?? 'N/A'); ?></td>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <p>No data found for the selected criteria. Please try a different date range or report type.</p>
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <p>Select report type and date range to generate a report.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </section>
+
         <!-- Analytics Section -->
         <section class="section <?php echo $current_page === 'analytics' ? 'active' : ''; ?>" id="analytics">
             <h1 class="section-title">Analytics & Reports</h1>
@@ -2118,6 +2311,40 @@ $diet_plans_result = $conn->query($diet_plans_query);
         }
     });
     <?php endif; ?>
+
+    // Excel Export Function
+    function exportToExcel() {
+        const table = document.getElementById('reportTable');
+        if (!table) return;
+
+        let csv = [];
+        const rows = table.querySelectorAll('tr');
+        
+        for (const row of rows) {
+            const cols = row.querySelectorAll('td,th');
+            const rowData = Array.from(cols).map(col => {
+                let text = col.innerText;
+                // Escape quotes and wrap in quotes if contains comma
+                if (text.includes(',') || text.includes('"')) {
+                    text = '"' + text.replace(/"/g, '""') + '"';
+                }
+                return text;
+            });
+            csv.push(rowData.join(','));
+        }
+
+        const csvContent = csv.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'report.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
     </script>
 </body>
 </html>
