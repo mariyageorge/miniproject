@@ -765,37 +765,90 @@ $total_pending = $total_row['total'] ?? 0;
 
         .balance-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
+            margin-top: 20px;
         }
 
         .balance-card {
             background: var(--white);
             border-radius: var(--border-radius);
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            border: 1px solid var(--nude-200);
+            gap: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             position: relative;
             overflow: hidden;
+            transition: all 0.3s ease;
         }
 
-        .balance-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
+        .balance-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(139, 69, 19, 0.15);
         }
 
-        .balance-positive::before {
-            background: var(--success-color);
+        .balance-icon {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
         }
 
-        .balance-negative::before {
-            background: var(--danger-color);
+        .balance-icon i {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.8rem;
+        }
+
+        .balance-positive .balance-icon i {
+            background: #4ade8033;
+            color: #4ade80;
+        }
+
+        .balance-negative .balance-icon i {
+            background: #f8717133;
+            color: #f87171;
+        }
+
+        .balance-amount {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            padding: 5px 0;
+        }
+
+        .balance-positive .balance-amount {
+            color: #4ade80;
+        }
+
+        .balance-negative .balance-amount {
+            color: #f87171;
+        }
+
+        .balance-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+            color: var(--text-primary);
+            padding: 5px 0;
+        }
+
+        .balance-name i {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .balance-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
 
         .balance-icon {
@@ -803,12 +856,6 @@ $total_pending = $total_row['total'] ?? 0;
             align-items: center;
             gap: 10px;
             color: var(--text-secondary);
-        }
-
-        .balance-amount {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--text-primary);
         }
 
         .balance-details {
@@ -1833,6 +1880,288 @@ $total_pending = $total_row['total'] ?? 0;
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
+
+        /* Add Expense Modal Specific Styles */
+        .expense-form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .expense-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .amount-input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 15px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        #expense_amount {
+            padding-left: 30px;
+        }
+
+        .split-method-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .split-method-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--nude-200);
+            background: var(--nude-100);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .split-method-btn:hover {
+            background: var(--nude-200);
+        }
+
+        .split-method-btn.active {
+            background: var(--brown-primary);
+            color: var(--white);
+            border-color: var(--brown-primary);
+        }
+
+        .split-details {
+            background: var(--nude-100);
+            border-radius: var(--border-radius);
+            padding: 15px;
+        }
+
+        .split-member {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: var(--white);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--nude-200);
+        }
+
+        .split-member:last-child {
+            margin-bottom: 0;
+        }
+
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--brown-primary);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            font-size: 1.2rem;
+        }
+
+        .member-details {
+            flex: 1;
+        }
+
+        .member-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .split-input {
+            width: 100px;
+            text-align: right;
+        }
+
+        .split-amount {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        #expense_image {
+            padding: 10px;
+        }
+
+        .image-preview {
+            margin-top: 10px;
+            max-width: 200px;
+            border-radius: var(--border-radius);
+            display: none;
+        }
+
+        /* Updated Expenses Styles */
+        .expenses-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .expense-item {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--brown-primary);
+        }
+
+        .expense-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 8px 16px rgba(139, 69, 19, 0.1);
+        }
+
+        .expense-details {
+            flex-grow: 1;
+        }
+
+        .expense-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .expense-meta {
+            display: flex;
+            gap: 15px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .expense-meta span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: var(--nude-100);
+            border-radius: 15px;
+        }
+
+        .expense-amount {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--brown-primary);
+            padding: 8px 16px;
+            background: var(--nude-100);
+            border-radius: 20px;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .no-expenses {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            background: var(--nude-100);
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+        }
+
+        .no-expenses i {
+            font-size: 2rem;
+            color: var(--brown-primary);
+            margin-bottom: 15px;
+        }
+
+        .no-expenses p {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+
+        .no-expenses small {
+            font-size: 0.9rem;
+        }
+
+        .confirmation-modal {
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .confirmation-header {
+            margin-bottom: 20px;
+        }
+
+        .confirmation-header i {
+            font-size: 48px;
+            color: #dc3545;
+            margin-bottom: 15px;
+        }
+
+        .confirmation-header h3 {
+            color: #dc3545;
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .confirmation-body {
+            margin-bottom: 25px;
+        }
+
+        .confirmation-body p {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .confirmation-warning {
+            color: #dc3545;
+            font-weight: 500;
+        }
+
+        .confirmation-footer {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .button-danger {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .button-danger:hover {
+            background-color: #c82333;
+        }
+
+        .button-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .button-secondary:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -1943,6 +2272,108 @@ $total_pending = $total_row['total'] ?? 0;
         </div>
     </div>
 
+    <!-- Add Expense Modal -->
+    <div id="addExpenseModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-receipt"></i> Add an expense</h2>
+                <button type="button" class="modal-close" onclick="closeModal('addExpenseModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addExpenseForm" method="post" enctype="multipart/form-data">
+                    <div class="expense-form-grid">
+                        <div class="form-group">
+                            <label for="expense_group">With you and:</label>
+                            <select id="expense_group" name="group_id" class="form-control" required>
+                                <option value="">Select a group</option>
+                                <?php
+                                mysqli_data_seek($groups_result, 0);
+                                while ($group = mysqli_fetch_assoc($groups_result)) {
+                                    echo '<option value="' . htmlspecialchars($group['group_id']) . '">' . 
+                                         htmlspecialchars($group['group_name']) . '</option>';
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense_description">Description</label>
+                            <input type="text" id="expense_description" name="description" class="form-control" 
+                                   placeholder="Enter expense description" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense_amount">Amount</label>
+                            <div class="amount-input-group">
+                                <span class="currency-symbol">$</span>
+                                <input type="number" id="expense_amount" name="amount" class="form-control" 
+                                       placeholder="0.00" step="0.01" min="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="paid_by">Paid by</label>
+                            <select id="paid_by" name="paid_by" class="form-control" required>
+                                <option value="<?php echo $_SESSION['user_id']; ?>">You</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Split Method</label>
+                            <div class="split-method-buttons">
+                                <button type="button" class="split-method-btn active" data-method="equal">
+                                    <i class="fas fa-equals"></i> Equal
+                                </button>
+                                <button type="button" class="split-method-btn" data-method="exact">
+                                    <i class="fas fa-calculator"></i> Exact
+                                </button>
+                                <button type="button" class="split-method-btn" data-method="percentage">
+                                    <i class="fas fa-percent"></i> Percentages
+                                </button>
+                            </div>
+                            <input type="hidden" name="split_method" id="split_method" value="equal">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Split Details</label>
+                            <div id="splitDetailsContainer" class="split-details">
+                                <!-- Split details will be populated dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense_date">Date</label>
+                            <input type="date" id="expense_date" name="date" class="form-control" 
+                                   value="<?php echo date('Y-m-d'); ?>" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense_image">Add Receipt/Image (optional)</label>
+                            <input type="file" id="expense_image" name="receipt_image" class="form-control" 
+                                   accept="image/*">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expense_notes">Notes (optional)</label>
+                            <textarea id="expense_notes" name="notes" class="form-control" 
+                                    placeholder="Add notes about this expense"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-outline" onclick="closeModal('addExpenseModal')">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="button" id="saveExpenseBtn" onclick="submitExpense()">
+                    <i class="fas fa-check"></i> Save Expense
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content Area -->
     <div class="main-content">
         <!-- Page Header -->
@@ -2009,24 +2440,20 @@ $total_pending = $total_row['total'] ?? 0;
                             <div class="balance-card <?php echo $balance['balance'] > 0 ? 'balance-positive' : 'balance-negative'; ?>">
                                 <div class="balance-icon">
                                     <?php if ($balance['balance'] > 0): ?>
-                                        <i class="fas fa-hand-holding-usd"></i>
-                                        <div>You are owed</div>
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span>you are owed</span>
                                     <?php else: ?>
-                                        <i class="fas fa-hand-holding-heart"></i>
-                                        <div>You owe</div>
+                                        <i class="fas fa-arrow-down"></i>
+                                        <span>you owe</span>
                                     <?php endif; ?>
                                 </div>
                                 <div class="balance-amount">
-                                    <span class="currency-amount" data-amount="<?php echo abs($balance['balance']); ?>"><?php echo number_format(abs($balance['balance']), 2); ?></span>
+                                    $<?php echo number_format(abs($balance['balance']), 2); ?>
                                 </div>
                                 <div class="balance-details">
                                     <div class="balance-name">
                                         <i class="fas fa-user"></i>
                                         <?php echo htmlspecialchars($balance['other_username']); ?>
-                                    </div>
-                                    <div class="balance-date">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        Last updated: <?php echo date('M d, Y'); ?>
                                     </div>
                                 </div>
                             </div>
@@ -2245,6 +2672,24 @@ $total_pending = $total_row['total'] ?? 0;
                     <button id="saveSettings" class="button">
                         <i class="fas fa-save"></i> Save Settings
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Leave Group Confirmation Modal -->
+        <div id="leaveGroupModal" class="modal">
+            <div class="modal-content confirmation-modal">
+                <div class="confirmation-header">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Leave Group</h3>
+                </div>
+                <div class="confirmation-body">
+                    <p>Are you sure you want to leave this group?</p>
+                    <p class="confirmation-warning">This action cannot be undone.</p>
+                </div>
+                <div class="confirmation-footer">
+                    <button class="button button-secondary" onclick="closeLeaveGroupModal()">Cancel</button>
+                    <button class="button button-danger" onclick="confirmLeaveGroupAction()">Leave Group</button>
                 </div>
             </div>
         </div>
@@ -2832,16 +3277,49 @@ $total_pending = $total_row['total'] ?? 0;
 
         // Function to handle invite members button click
         function handleInviteMembers(groupId) {
-            // Clear any existing tags
-            const container = document.getElementById('inviteTagContainer');
-            const existingTags = container.querySelectorAll('.tag');
-            existingTags.forEach(tag => tag.remove());
-            
-            // Set the group ID in the hidden input
             document.getElementById('invite_group_id').value = groupId;
-            
-            // Open the modal
             openModal('inviteMembersModal');
+        }
+
+        let currentGroupId = null;
+
+        function confirmLeaveGroup(groupId) {
+            currentGroupId = groupId;
+            openModal('leaveGroupModal');
+        }
+
+        function closeLeaveGroupModal() {
+            closeModal('leaveGroupModal');
+            currentGroupId = null;
+        }
+
+        function confirmLeaveGroupAction() {
+            if (!currentGroupId) return;
+
+            fetch('leave_group.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `group_id=${currentGroupId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Successfully left the group', 'success');
+                    closeLeaveGroupModal();
+                    // Refresh the page to update the groups list
+                    location.reload();
+                } else {
+                    showToast(data.error || 'Failed to leave group', 'error');
+                    closeLeaveGroupModal();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to leave group', 'error');
+                closeLeaveGroupModal();
+            });
         }
 
         // Function to submit invite members form
@@ -2872,6 +3350,257 @@ $total_pending = $total_row['total'] ?? 0;
                 showToast('Failed to send invitations', 'error');
             });
         }
+
+        // Function to handle split method selection
+        function handleSplitMethodChange(method) {
+            const buttons = document.querySelectorAll('.split-method-btn');
+            buttons.forEach(btn => {
+                if (btn.dataset.method === method) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            document.getElementById('split_method').value = method;
+            updateSplitDetails();
+        }
+
+        // Function to update split details based on selected method
+        function updateSplitDetails() {
+            const container = document.getElementById('splitDetailsContainer');
+            const amount = parseFloat(document.getElementById('expense_amount').value) || 0;
+            const method = document.getElementById('split_method').value;
+            const groupId = document.getElementById('expense_group').value;
+
+            if (!groupId) {
+                container.innerHTML = '<p>Please select a group first</p>';
+                return;
+            }
+
+            // Fetch group members and update split details
+            fetch(`get_group_members.php?group_id=${groupId}`)
+                .then(response => response.json())
+                .then(members => {
+                    let html = '';
+                    const memberCount = members.length;
+
+                    members.forEach(member => {
+                        const splitAmount = method === 'equal' ? (amount / memberCount).toFixed(2) : '0.00';
+                        const inputType = method === 'percentage' ? 'number' : 'text';
+                        const inputValue = method === 'equal' ? (100 / memberCount).toFixed(0) : '0';
+                        const placeholder = method === 'percentage' ? '%' : '$';
+
+                        html += `
+                            <div class="split-member">
+                                <div class="member-avatar">
+                                    ${member.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div class="member-details">
+                                    <div class="member-name">${member.username}</div>
+                                    <div class="split-amount">$${splitAmount}</div>
+                                </div>
+                                <input type="${inputType}" 
+                                       class="form-control split-input" 
+                                       name="splits[${member.user_id}]"
+                                       value="${inputValue}"
+                                       placeholder="${placeholder}"
+                                       min="0"
+                                       ${method === 'equal' ? 'readonly' : ''}
+                                       onchange="updateSplitAmounts(this)">
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    container.innerHTML = '<p>Error loading group members</p>';
+                });
+        }
+
+        // Function to update split amounts when values change
+        function updateSplitAmounts(input) {
+            const amount = parseFloat(document.getElementById('expense_amount').value) || 0;
+            const method = document.getElementById('split_method').value;
+            const splits = document.querySelectorAll('.split-input');
+            const splitAmounts = document.querySelectorAll('.split-amount');
+
+            if (method === 'percentage') {
+                let total = 0;
+                splits.forEach(split => {
+                    total += parseFloat(split.value) || 0;
+                });
+
+                splits.forEach((split, index) => {
+                    const percentage = parseFloat(split.value) || 0;
+                    const splitAmount = (amount * (percentage / 100)).toFixed(2);
+                    splitAmounts[index].textContent = `$${splitAmount}`;
+                });
+
+                if (Math.abs(total - 100) > 0.01) {
+                    showToast('Percentages must add up to 100%', 'error');
+                    return false;
+                }
+            } else if (method === 'exact') {
+                let total = 0;
+                splits.forEach(split => {
+                    total += parseFloat(split.value) || 0;
+                });
+
+                if (Math.abs(total - amount) > 0.01) {
+                    showToast('Split amounts must equal the total amount', 'error');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Function to submit expense
+        function submitExpense() {
+            const saveButton = document.getElementById('saveExpenseBtn');
+            
+            // Disable the button to prevent double submission
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            // Validate form
+            if (!validateExpenseForm()) {
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-check"></i> Save Expense';
+                return;
+            }
+
+            const form = document.getElementById('addExpenseForm');
+            const formData = new FormData(form);
+
+            fetch('add_expense.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    closeModal('addExpenseModal');
+                    // Reset form
+                    form.reset();
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showToast(data.error || 'Failed to add expense', 'error');
+                    saveButton.disabled = false;
+                    saveButton.innerHTML = '<i class="fas fa-check"></i> Save Expense';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to add expense', 'error');
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-check"></i> Save Expense';
+            });
+        }
+
+        // Function to validate expense form
+        function validateExpenseForm() {
+            const amount = parseFloat(document.getElementById('expense_amount').value);
+            const description = document.getElementById('expense_description').value.trim();
+            const groupId = document.getElementById('expense_group').value;
+            const splitMethod = document.getElementById('split_method').value;
+
+            if (!groupId) {
+                showToast('Please select a group', 'error');
+                return false;
+            }
+
+            if (!description) {
+                showToast('Please enter a description', 'error');
+                return false;
+            }
+
+            if (!amount || amount <= 0) {
+                showToast('Please enter a valid amount', 'error');
+                return false;
+            }
+
+            // Validate splits based on method
+            if (splitMethod === 'percentage') {
+                let total = 0;
+                document.querySelectorAll('.split-input').forEach(input => {
+                    total += parseFloat(input.value) || 0;
+                });
+
+                if (Math.abs(total - 100) > 0.01) {
+                    showToast('Percentages must add up to 100%', 'error');
+                    return false;
+                }
+            } else if (splitMethod === 'exact') {
+                let total = 0;
+                document.querySelectorAll('.split-input').forEach(input => {
+                    total += parseFloat(input.value) || 0;
+                });
+
+                if (Math.abs(total - amount) > 0.01) {
+                    showToast('Split amounts must equal the total amount', 'error');
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Initialize event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners for split method buttons
+            document.querySelectorAll('.split-method-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevent form submission
+                    handleSplitMethodChange(this.dataset.method);
+                });
+            });
+
+            // Add event listener for group selection
+            document.getElementById('expense_group').addEventListener('change', function() {
+                updateSplitDetails();
+                // Update paid by dropdown
+                const groupId = this.value;
+                if (groupId) {
+                    fetch(`get_group_members.php?group_id=${groupId}`)
+                        .then(response => response.json())
+                        .then(members => {
+                            const paidBySelect = document.getElementById('paid_by');
+                            paidBySelect.innerHTML = `<option value="${'<?php echo $_SESSION['user_id']; ?>'}">You</option>`;
+                            members.forEach(member => {
+                                if (member.user_id !== <?php echo $_SESSION['user_id']; ?>) {
+                                    paidBySelect.innerHTML += `
+                                        <option value="${member.user_id}">${member.username}</option>
+                                    `;
+                                }
+                            });
+                        });
+                }
+            });
+
+            // Add event listener for amount changes
+            document.getElementById('expense_amount').addEventListener('input', function() {
+                updateSplitDetails();
+            });
+
+            // Add event listeners for split inputs
+            document.addEventListener('input', function(e) {
+                if (e.target.classList.contains('split-input')) {
+                    updateSplitAmounts(e.target);
+                }
+            });
+
+            // Add event listener for form submission
+            document.getElementById('addExpenseForm').addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent default form submission
+                submitExpense();
+            });
+        });
     </script>
 </body>
 </html>

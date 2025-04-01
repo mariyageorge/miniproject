@@ -14,8 +14,8 @@ class Mailer {
         $this->mail->isSMTP();
         $this->mail->Host = 'smtp.gmail.com'; // Replace with your SMTP host
         $this->mail->SMTPAuth = true;
-        $this->mail->Username = 'your-email@gmail.com'; // Replace with your email
-        $this->mail->Password = 'your-app-password'; // Replace with your app password
+        $this->mail->Username = 'lifesyncdigital@gmail.com'; // Replace with your email
+        $this->mail->Password = 'yrpw iqys blcl famq'; // Replace with your app password
         $this->mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $this->mail->Port = 587;
         

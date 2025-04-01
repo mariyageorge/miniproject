@@ -36,9 +36,14 @@ $is_creator = ($group['created_by'] == $user_id);
         <i class="fas fa-users-between-lines"></i>
         <?php echo htmlspecialchars($group['group_name']); ?>
     </h2>
-    <p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">
-        <i class="fas fa-calendar"></i> Created: <?php echo date('M d, Y', strtotime($group['created_at'])); ?>
-    </p>
+    <div class="group-meta" style="margin-top: 10px; font-size: 0.9rem; opacity: 0.9;">
+        <p style="margin: 0;">
+            <i class="fas fa-user-shield"></i> Created by: <?php echo htmlspecialchars($group['creator_name']); ?>
+        </p>
+        <p style="margin: 5px 0 0 0;">
+            <i class="fas fa-calendar"></i> Created: <?php echo date('M d, Y', strtotime($group['created_at'])); ?>
+        </p>
+    </div>
 </div>
 
 <div class="group-actions" style="display: flex; gap: 10px; margin-bottom: 20px;">
@@ -48,6 +53,11 @@ $is_creator = ($group['created_by'] == $user_id);
     <button class="button invite-members" onclick="handleInviteMembers(<?php echo $group_id; ?>)">
         <i class="fas fa-user-plus"></i> Invite Members
     </button>
+    <?php if (!$is_creator): ?>
+    <button class="button leave-group" onclick="confirmLeaveGroup(<?php echo $group_id; ?>)" style="margin-left: auto;">
+        <i class="fas fa-sign-out-alt"></i> Leave Group
+    </button>
+    <?php endif; ?>
 </div>
 
 <div class="section-tabs" style="margin-bottom: 20px;">
@@ -168,8 +178,10 @@ $members_result = mysqli_stmt_get_result($stmt);
         <div id="expenses-section" class="section-content">
     <h3>Expenses</h3>
             <?php 
-    // Get expenses for this group
-    $expenses_query = "SELECT e.*, u.username as paid_by_user
+    // Get expenses for this group with additional details
+    $expenses_query = "SELECT e.*, u.username as paid_by_user, 
+                      (SELECT COUNT(*) FROM expense_shares es WHERE es.expense_id = e.expense_id AND es.status = 'settled') as settled_count,
+                      (SELECT COUNT(*) FROM expense_shares es WHERE es.expense_id = e.expense_id) as total_shares
                       FROM expenses e
                       JOIN users u ON e.paid_by = u.user_id
                       WHERE e.group_id = ?
@@ -180,16 +192,18 @@ $members_result = mysqli_stmt_get_result($stmt);
     $expenses_result = mysqli_stmt_get_result($stmt);
     
     if (mysqli_num_rows($expenses_result) > 0): ?>
-                <div class="expenses-list">
-                    <?php while ($expense = mysqli_fetch_assoc($expenses_result)): ?>
-                        <div class="expense-card">
-                            <div class="expense-header">
-                                <h4><?php echo htmlspecialchars($expense['description']); ?></h4>
+        <div class="expenses-list">
+            <?php while ($expense = mysqli_fetch_assoc($expenses_result)): 
+                $is_fully_settled = $expense['settled_count'] == $expense['total_shares'];
+            ?>
+                <div class="expense-card" onclick="showExpenseDetails(<?php echo $expense['expense_id']; ?>)">
+                    <div class="expense-header">
+                        <h4><?php echo htmlspecialchars($expense['description']); ?></h4>
                         <div class="expense-amount">
                             $<?php echo number_format($expense['amount'], 2); ?>
                         </div>
-                            </div>
-                            <div class="expense-meta">
+                    </div>
+                    <div class="expense-meta">
                         <span>
                             <i class="fas fa-user"></i>
                             Paid by: <?php echo htmlspecialchars($expense['paid_by_user']); ?>
@@ -198,13 +212,17 @@ $members_result = mysqli_stmt_get_result($stmt);
                             <i class="fas fa-calendar"></i>
                             <?php echo date('M d, Y', strtotime($expense['date_added'])); ?>
                         </span>
-                            </div>
-                        </div>
-                    <?php endwhile; ?>
+                        <span class="settlement-status <?php echo $is_fully_settled ? 'settled' : 'pending'; ?>">
+                            <i class="fas <?php echo $is_fully_settled ? 'fa-check-circle' : 'fa-clock'; ?>"></i>
+                            <?php echo $is_fully_settled ? 'Settled' : 'Settlement Pending'; ?>
+                        </span>
+                    </div>
                 </div>
-            <?php else: ?>
-        <p>No expenses yet</p>
-            <?php endif; ?>
+            <?php endwhile; ?>
+        </div>
+    <?php else: ?>
+        <p class="no-expenses">No expenses yet</p>
+    <?php endif; ?>
         </div>
 
 <?php if ($is_creator): ?>
@@ -241,6 +259,19 @@ $members_result = mysqli_stmt_get_result($stmt);
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Expense Details Modal -->
+<div id="expenseDetailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-receipt"></i> Expense Details</h3>
+            <span class="close" onclick="closeModal('expenseDetailsModal')">&times;</span>
+        </div>
+        <div class="modal-body" id="expenseDetailsContent">
+            <!-- Content will be loaded dynamically -->
         </div>
     </div>
 </div>
@@ -639,6 +670,164 @@ $members_result = mysqli_stmt_get_result($stmt);
     display: flex;
     justify-content: flex-end;
 }
+
+.button.leave-group {
+    background: #dc3545;
+    color: white;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+    margin-left: auto;
+}
+
+.button.leave-group:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.group-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.group-meta p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.expense-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.expense-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.settlement-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.settlement-status.settled {
+    background: rgba(74, 222, 128, 0.1);
+    color: #047857;
+}
+
+.settlement-status.pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+}
+
+.expense-details {
+    padding: 20px;
+}
+
+.expense-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--nude-200);
+}
+
+.expense-details-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.expense-details-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.expense-details-meta-item label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.expense-details-meta-item span {
+    font-weight: 500;
+}
+
+.shares-list {
+    border: 1px solid var(--nude-200);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.share-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--nude-200);
+}
+
+.share-item:last-child {
+    border-bottom: none;
+}
+
+.share-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.share-item-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.share-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.share-status.settled {
+    background: rgba(74, 222, 128, 0.1);
+    color: #047857;
+}
+
+.share-status.pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+}
+
+.settle-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: var(--brown-primary);
+    color: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.settle-button:hover {
+    background: var(--brown-hover);
+}
+
+.settle-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 </style>
 
 <script>
@@ -702,6 +891,143 @@ function confirmDeleteGroup(groupId) {
             showToast('An error occurred while deleting the group', 'error');
         });
     }
+}
+
+function showExpenseDetails(expenseId) {
+    fetch(`get_expense_details.php?expense_id=${expenseId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const expense = data.expense;
+                const content = `
+                    <div class="expense-details">
+                        <div class="expense-details-header">
+                            <div>
+                                <h3>${expense.description}</h3>
+                                <p class="text-secondary">Added on ${expense.date_added}</p>
+                            </div>
+                            <div class="expense-amount">$${parseFloat(expense.amount).toFixed(2)}</div>
+                        </div>
+                        
+                        <div class="expense-details-meta">
+                            <div class="expense-details-meta-item">
+                                <label>Paid By</label>
+                                <span>${expense.paid_by_user}</span>
+                            </div>
+                            <div class="expense-details-meta-item">
+                                <label>Split Method</label>
+                                <span>${expense.split_method}</span>
+                            </div>
+                            ${expense.notes ? `
+                            <div class="expense-details-meta-item">
+                                <label>Notes</label>
+                                <span>${expense.notes}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        <h4>Shares</h4>
+                        <div class="shares-list">
+                            ${expense.shares.map(share => `
+                                <div class="share-item">
+                                    <div class="share-item-left">
+                                        <i class="fas fa-user"></i>
+                                        ${share.username}
+                                    </div>
+                                    <div class="share-item-right">
+                                        <div>$${parseFloat(share.share_amount).toFixed(2)}</div>
+                                        <div class="share-status ${share.is_settled ? 'settled' : 'pending'}">
+                                            <i class="fas ${share.is_settled ? 'fa-check-circle' : 'fa-clock'}"></i>
+                                            ${share.is_settled ? 'Settled' : 'Pending'}
+                                        </div>
+                                        ${!share.is_settled && share.user_id == ${user_id} ? `
+                                            <button class="settle-button" onclick="settleExpense(${expense.expense_id}, ${share.user_id})">
+                                                Settle
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('expenseDetailsContent').innerHTML = content;
+                openModal('expenseDetailsModal');
+            } else {
+                showToast(data.error || 'Failed to load expense details', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to load expense details', 'error');
+        });
+}
+
+function settleExpense(expenseId, userId) {
+    if (!confirm('Are you sure you want to mark this expense as settled?')) {
+        return;
+    }
+
+    fetch('settle_expense.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `expense_id=${expenseId}&user_id=${userId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Expense settled successfully', 'success');
+            showExpenseDetails(expenseId); // Refresh the modal
+            // Refresh the expenses list
+            location.reload();
+        } else {
+            showToast(data.error || 'Failed to settle expense', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to settle expense', 'error');
+    });
+}
+
+// Fix leave group functionality
+function confirmLeaveGroup(groupId) {
+    if (!confirm('Are you sure you want to leave this group?')) {
+        return;
+    }
+
+    const button = document.querySelector('.button.leave-group');
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Leaving...';
+
+    fetch('leave_group.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `group_id=${groupId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Successfully left the group', 'success');
+            setTimeout(() => {
+                window.location.href = 'index.php';
+            }, 1500);
+        } else {
+            showToast(data.error || 'Failed to leave group', 'error');
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-sign-out-alt"></i> Leave Group';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred while leaving the group', 'error');
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-sign-out-alt"></i> Leave Group';
+    });
 }
 
 // Initialize the invite members functionality
