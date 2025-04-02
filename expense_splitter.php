@@ -2294,6 +2294,38 @@ $total_pending = $total_row['total'] ?? 0;
         .settle-button:hover {
             background: var(--brown-hover);
         }
+
+        .expense-receipt {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .expense-receipt img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .expense-notes {
+            background: var(--nude-100);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .expense-notes label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .expense-notes p {
+            margin: 0;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body>
@@ -3717,13 +3749,21 @@ $total_pending = $total_row['total'] ?? 0;
                                         <label>Group</label>
                                         <span>${expense.group_name}</span>
                                     </div>
-                                    ${expense.notes ? `
-                                    <div class="expense-details-meta-item">
-                                        <label>Notes</label>
-                                        <span>${expense.notes}</span>
-                                    </div>
-                                    ` : ''}
                                 </div>
+
+                                ${expense.receipt_image ? `
+                                <div class="expense-receipt">
+                                    <label>Receipt/Photos</label>
+                                    <img src="${expense.receipt_image}" alt="Expense Receipt" onclick="window.open(this.src)">
+                                </div>
+                                ` : ''}
+
+                                ${expense.notes ? `
+                                <div class="expense-notes">
+                                    <label>Notes</label>
+                                    <p>${expense.notes}</p>
+                                </div>
+                                ` : ''}
 
                                 <h4>Shares</h4>
                                 <div class="shares-list">

@@ -64,10 +64,10 @@ try {
     }
 
     // Insert expense record
-    $query = "INSERT INTO expenses (group_id, description, amount, paid_by, date_added) 
-              VALUES (?, ?, ?, ?, ?)";
+    $query = "INSERT INTO expenses (group_id, description, amount, paid_by, date_added, notes, receipt_image) 
+              VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmt = mysqli_prepare($conn, $query);
-    mysqli_stmt_bind_param($stmt, "isdis", $group_id, $description, $amount, $paid_by, $date);
+    mysqli_stmt_bind_param($stmt, "isdisss", $group_id, $description, $amount, $paid_by, $date, $notes, $receipt_path);
     
     if (!mysqli_stmt_execute($stmt)) {
         throw new Exception('Failed to add expense: ' . mysqli_error($conn));
