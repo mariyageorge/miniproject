@@ -99,15 +99,52 @@ try {
                 ];
             }
         }
-    } else {
-        // Process custom splits from form data
-        foreach ($_POST['splits'] as $user_id => $split_amount) {
-            if ($user_id != $paid_by && floatval($split_amount) > 0) {
+    } else if ($split_method === 'percentage') {
+        // Process percentage splits
+        foreach ($_POST['splits'] as $user_id => $percentage) {
+            if ($user_id != $paid_by && is_numeric($percentage) && $percentage > 0) {
                 $splits[] = [
                     'user_id' => $user_id,
-                    'amount' => $split_method === 'percentage' ? ($amount * floatval($split_amount) / 100) : floatval($split_amount)
+                    'amount' => ($amount * floatval($percentage)) / 100
                 ];
             }
+        }
+    } else if ($split_method === 'exact') {
+        // Process exact amount splits
+        foreach ($_POST['splits'] as $user_id => $split_amount) {
+            if ($user_id != $paid_by && is_numeric($split_amount) && floatval($split_amount) > 0) {
+                $splits[] = [
+                    'user_id' => $user_id,
+                    'amount' => floatval($split_amount)
+                ];
+            }
+        }
+    }
+
+    // Validate splits
+    if (empty($splits)) {
+        throw new Exception('No valid splits provided');
+    }
+
+    // For percentage splits, verify total is 100%
+    if ($split_method === 'percentage') {
+        $total_percentage = 0;
+        foreach ($_POST['splits'] as $percentage) {
+            $total_percentage += floatval($percentage);
+        }
+        if (abs($total_percentage - 100) > 0.01) {
+            throw new Exception('Percentage splits must total 100%');
+        }
+    }
+
+    // For exact splits, verify total matches expense amount
+    if ($split_method === 'exact') {
+        $total_split = 0;
+        foreach ($splits as $split) {
+            $total_split += $split['amount'];
+        }
+        if (abs($total_split - $amount) > 0.01) {
+            throw new Exception('Split amounts must equal the total expense amount');
         }
     }
 

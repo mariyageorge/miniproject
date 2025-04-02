@@ -3749,19 +3749,18 @@ $total_pending = $total_row['total'] ?? 0;
                                         <label>Group</label>
                                         <span>${expense.group_name}</span>
                                     </div>
+                                    ${expense.notes ? `
+                                    <div class="expense-details-meta-item">
+                                        <label>Notes</label>
+                                        <span>${expense.notes}</span>
+                                    </div>
+                                    ` : ''}
                                 </div>
 
                                 ${expense.receipt_image ? `
                                 <div class="expense-receipt">
                                     <label>Receipt/Photos</label>
                                     <img src="${expense.receipt_image}" alt="Expense Receipt" onclick="window.open(this.src)">
-                                </div>
-                                ` : ''}
-
-                                ${expense.notes ? `
-                                <div class="expense-notes">
-                                    <label>Notes</label>
-                                    <p>${expense.notes}</p>
                                 </div>
                                 ` : ''}
 
@@ -3779,11 +3778,6 @@ $total_pending = $total_row['total'] ?? 0;
                                                     <i class="fas ${share.status === 'settled' ? 'fa-check-circle' : 'fa-clock'}"></i>
                                                     ${share.status === 'settled' ? 'Settled' : 'Pending'}
                                                 </div>
-                                                ${share.status !== 'settled' && share.user_id == <?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : '0'; ?> ? `
-                                                    <button class="settle-button" onclick="settleExpense(${expense.expense_id}, ${share.user_id})">
-                                                        Settle
-                                                    </button>
-                                                ` : ''}
                                             </div>
                                         </div>
                                     `).join('')}
@@ -3812,13 +3806,14 @@ $total_pending = $total_row['total'] ?? 0;
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `expense_id=${expenseId}&user_id=${userId}`
+                body: `expense_id=${expenseId}`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     showToast('Expense settled successfully', 'success');
                     closeModal('expenseDetailsModal');
+                    // Refresh the page to update the expense list
                     location.reload();
                 } else {
                     showToast(data.error || 'Failed to settle expense', 'error');

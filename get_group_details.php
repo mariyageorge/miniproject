@@ -141,7 +141,9 @@ $members_result = mysqli_stmt_get_result($stmt);
                 <div class="expense-card" onclick="showExpenseDetails(<?php echo $expense['expense_id']; ?>)">
                     <div class="expense-card-header">
                         <h4 class="expense-title"><?php echo htmlspecialchars($expense['description']); ?></h4>
-                        <div class="expense-amount">$<?php echo number_format($expense['amount'], 2); ?></div>
+                        <div class="expense-amount currency-amount" data-amount="<?php echo $expense['amount']; ?>">
+                            <?php echo number_format($expense['amount'], 2); ?>
+                        </div>
                     </div>
                     <div class="expense-card-body">
                         <div class="expense-meta">
