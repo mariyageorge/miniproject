@@ -2162,6 +2162,138 @@ $total_pending = $total_row['total'] ?? 0;
         .button-secondary:hover {
             background-color: #5a6268;
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--brown-primary), var(--brown-hover));
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-header .close {
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .expense-details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--nude-200);
+        }
+
+        .expense-details-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .expense-details-meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .expense-details-meta-item label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .expense-details-meta-item span {
+            font-size: 1rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .shares-list {
+            border: 1px solid var(--nude-200);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .share-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--nude-200);
+        }
+
+        .share-item:last-child {
+            border-bottom: none;
+        }
+
+        .share-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .share-item-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .settle-button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            background: var(--brown-primary);
+            color: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .settle-button:hover {
+            background: var(--brown-hover);
+        }
     </style>
 </head>
 <body>
@@ -2177,11 +2309,8 @@ $total_pending = $total_row['total'] ?? 0;
         </div>
             </div>
         <nav class="nav-links">
-            <a href="#balance-overview" class="nav-link active">
-                <i class="fas fa-wallet"></i>
-                <span>Balance Overview</span>
-            </a>
-            <a href="#my-groups" class="nav-link">
+           
+            <a href="#my-groups" class="nav-link active">
                 <i class="fas fa-users"></i>
                 <span>My Groups</span>
             </a>
@@ -2374,6 +2503,19 @@ $total_pending = $total_row['total'] ?? 0;
         </div>
     </div>
 
+    <!-- Expense Details Modal -->
+    <div id="expenseDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-receipt"></i> Expense Details</h3>
+                <span class="close" onclick="closeModal('expenseDetailsModal')">&times;</span>
+            </div>
+            <div class="modal-body" id="expenseDetailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content Area -->
     <div class="main-content">
         <!-- Page Header -->
@@ -2410,59 +2552,7 @@ $total_pending = $total_row['total'] ?? 0;
             </div>
         <?php else: ?>
             <!-- Content Sections -->
-            <div id="balance-overview" class="section active">
-                <div class="section-title">
-                    <i class="fas fa-wallet"></i> Your Balance Overview
-                    <div class="total-balance">
-                        <?php
-                        $total_balance = 0;
-                        foreach ($balances as $balance) {
-                            $total_balance += $balance['balance'];
-                        }
-                        $balance_class = $total_balance > 0 ? 'positive' : ($total_balance < 0 ? 'negative' : 'neutral');
-                        ?>
-                        <span class="balance-indicator <?php echo $balance_class; ?>">
-                            <i class="fas fa-<?php echo $total_balance > 0 ? 'arrow-up' : ($total_balance < 0 ? 'arrow-down' : 'equals'); ?>"></i>
-                            Total: <span class="currency-amount" data-amount="<?php echo abs($total_balance); ?>"><?php echo number_format(abs($total_balance), 2); ?></span>
-                        </span>
-                    </div>
-                </div>
-                
-                <?php if (empty($balances)): ?>
-                    <div class="no-balances">
-                        <i class="fas fa-check-circle"></i>
-                        <p>All your balances are settled. You don't owe anyone and no one owes you.</p>
-                        <small>When you add expenses in groups, they'll appear here.</small>
-                    </div>
-                <?php else: ?>
-                    <div class="balance-container">
-                        <?php foreach ($balances as $balance): ?>
-                            <div class="balance-card <?php echo $balance['balance'] > 0 ? 'balance-positive' : 'balance-negative'; ?>">
-                                <div class="balance-icon">
-                                    <?php if ($balance['balance'] > 0): ?>
-                                        <i class="fas fa-arrow-up"></i>
-                                        <span>you are owed</span>
-                                    <?php else: ?>
-                                        <i class="fas fa-arrow-down"></i>
-                                        <span>you owe</span>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="balance-amount">
-                                    $<?php echo number_format(abs($balance['balance']), 2); ?>
-                                </div>
-                                <div class="balance-details">
-                                    <div class="balance-name">
-                                        <i class="fas fa-user"></i>
-                                        <?php echo htmlspecialchars($balance['other_username']); ?>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <div id="my-groups" class="section">
+            <div id="my-groups" class="section active">
                 <div class="section-title">
                     <i class="fas fa-users"></i> My Groups
                     <button class="button" onclick="openModal('createGroupModal')">
@@ -3601,6 +3691,104 @@ $total_pending = $total_row['total'] ?? 0;
                 submitExpense();
             });
         });
+
+        function showExpenseDetails(expenseId) {
+            fetch(`get_expense_details.php?expense_id=${expenseId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const expense = data.expense;
+                        const content = `
+                            <div class="expense-details">
+                                <div class="expense-details-header">
+                                    <div>
+                                        <h3>${expense.description}</h3>
+                                        <p class="text-secondary">Added on ${expense.date_added}</p>
+                                    </div>
+                                    <div class="expense-amount">$${parseFloat(expense.amount).toFixed(2)}</div>
+                                </div>
+                                
+                                <div class="expense-details-meta">
+                                    <div class="expense-details-meta-item">
+                                        <label>Paid By</label>
+                                        <span>${expense.paid_by_user}</span>
+                                    </div>
+                                    <div class="expense-details-meta-item">
+                                        <label>Group</label>
+                                        <span>${expense.group_name}</span>
+                                    </div>
+                                    ${expense.notes ? `
+                                    <div class="expense-details-meta-item">
+                                        <label>Notes</label>
+                                        <span>${expense.notes}</span>
+                                    </div>
+                                    ` : ''}
+                                </div>
+
+                                <h4>Shares</h4>
+                                <div class="shares-list">
+                                    ${expense.shares.map(share => `
+                                        <div class="share-item">
+                                            <div class="share-item-left">
+                                                <i class="fas fa-user"></i>
+                                                ${share.username}
+                                            </div>
+                                            <div class="share-item-right">
+                                                <div>$${parseFloat(share.share_amount).toFixed(2)}</div>
+                                                <div class="share-status ${share.status === 'settled' ? 'settled' : 'pending'}">
+                                                    <i class="fas ${share.status === 'settled' ? 'fa-check-circle' : 'fa-clock'}"></i>
+                                                    ${share.status === 'settled' ? 'Settled' : 'Pending'}
+                                                </div>
+                                                ${share.status !== 'settled' && share.user_id == <?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : '0'; ?> ? `
+                                                    <button class="settle-button" onclick="settleExpense(${expense.expense_id}, ${share.user_id})">
+                                                        Settle
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                        document.getElementById('expenseDetailsContent').innerHTML = content;
+                        openModal('expenseDetailsModal');
+                    } else {
+                        showToast(data.error || 'Failed to load expense details', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Failed to load expense details', 'error');
+                });
+        }
+
+        function settleExpense(expenseId, userId) {
+            if (!confirm('Are you sure you want to mark this expense as settled?')) {
+                return;
+            }
+
+            fetch('settle_expense.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `expense_id=${expenseId}&user_id=${userId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Expense settled successfully', 'success');
+                    closeModal('expenseDetailsModal');
+                    location.reload();
+                } else {
+                    showToast(data.error || 'Failed to settle expense', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to settle expense', 'error');
+            });
+        }
     </script>
 </body>
 </html>

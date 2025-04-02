@@ -64,9 +64,6 @@ $is_creator = ($group['created_by'] == $user_id);
     <button class="tab-button" onclick="showSection('members')">
         <i class="fas fa-users"></i> Members
     </button>
-    <button class="tab-button" onclick="showSection('balances')">
-        <i class="fas fa-balance-scale"></i> Balances
-    </button>
     <button class="tab-button active" onclick="showSection('expenses')">
         <i class="fas fa-receipt"></i> Expenses
     </button>
@@ -120,63 +117,8 @@ $members_result = mysqli_stmt_get_result($stmt);
     <?php endif; ?>
         </div>
 
-        <div id="balances-section" class="section-content">
-    <h3>Group Balances</h3>
-                <?php 
-    // Get balances for this group
-    $balances_query = "SELECT 
-                        u.username,
-                        SUM(CASE 
-                            WHEN e.paid_by = u.user_id THEN e.amount
-                            ELSE 0
-                        END) as paid,
-                        SUM(CASE 
-                            WHEN es.user_id = u.user_id THEN es.share_amount
-                            ELSE 0
-                        END) as owed
-                      FROM group_members gm
-                      JOIN users u ON gm.user_id = u.user_id
-                      LEFT JOIN expenses e ON e.group_id = gm.group_id AND e.paid_by = u.user_id
-                      LEFT JOIN expense_shares es ON es.expense_id = e.expense_id AND es.user_id = u.user_id
-                      WHERE gm.group_id = ? AND gm.invitation_status = 'accepted'
-                      GROUP BY u.user_id";
-    $stmt = mysqli_prepare($conn, $balances_query);
-    mysqli_stmt_bind_param($stmt, "i", $group_id);
-    mysqli_stmt_execute($stmt);
-    $balances_result = mysqli_stmt_get_result($stmt);
-    
-    if (mysqli_num_rows($balances_result) > 0): ?>
-        <div class="balance-container">
-            <?php while ($balance = mysqli_fetch_assoc($balances_result)):
-                $net_balance = $balance['paid'] - $balance['owed'];
-            ?>
-                <div class="balance-card <?php echo $net_balance > 0 ? 'balance-positive' : 'balance-negative'; ?>">
-                        <div class="balance-amount">
-                            $<?php echo number_format(abs($net_balance), 2); ?>
-                    </div>
-                    <div class="balance-details">
-                        <div class="balance-name">
-                            <i class="fas fa-user"></i>
-                            <?php echo htmlspecialchars($balance['username']); ?>
-                        </div>
-                        <div class="balance-status">
-                            <?php if ($net_balance > 0): ?>
-                                <i class="fas fa-arrow-up text-success"></i> Is owed
-                            <?php else: ?>
-                                <i class="fas fa-arrow-down text-danger"></i> Owes
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    </div>
-                <?php endwhile; ?>
-        </div>
-    <?php else: ?>
-        <p>No balances found</p>
-    <?php endif; ?>
-        </div>
-
         <div id="expenses-section" class="section-content">
-    <h3>Expenses</h3>
+            <h3>Expenses</h3>
             <?php 
     // Get expenses for this group with additional details
     $expenses_query = "SELECT e.*, u.username as paid_by_user, 
@@ -192,36 +134,40 @@ $members_result = mysqli_stmt_get_result($stmt);
     $expenses_result = mysqli_stmt_get_result($stmt);
     
     if (mysqli_num_rows($expenses_result) > 0): ?>
-        <div class="expenses-list">
+        <div class="expenses-grid">
             <?php while ($expense = mysqli_fetch_assoc($expenses_result)): 
                 $is_fully_settled = $expense['settled_count'] == $expense['total_shares'];
             ?>
                 <div class="expense-card" onclick="showExpenseDetails(<?php echo $expense['expense_id']; ?>)">
-                    <div class="expense-header">
-                        <h4><?php echo htmlspecialchars($expense['description']); ?></h4>
-                        <div class="expense-amount">
-                            $<?php echo number_format($expense['amount'], 2); ?>
-                        </div>
+                    <div class="expense-card-header">
+                        <h4 class="expense-title"><?php echo htmlspecialchars($expense['description']); ?></h4>
+                        <div class="expense-amount">$<?php echo number_format($expense['amount'], 2); ?></div>
                     </div>
-                    <div class="expense-meta">
-                        <span>
-                            <i class="fas fa-user"></i>
-                            Paid by: <?php echo htmlspecialchars($expense['paid_by_user']); ?>
-                        </span>
-                        <span>
-                            <i class="fas fa-calendar"></i>
-                            <?php echo date('M d, Y', strtotime($expense['date_added'])); ?>
-                        </span>
-                        <span class="settlement-status <?php echo $is_fully_settled ? 'settled' : 'pending'; ?>">
+                    <div class="expense-card-body">
+                        <div class="expense-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-user"></i>
+                                <span>Paid by: <?php echo htmlspecialchars($expense['paid_by_user']); ?></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span><?php echo date('M d, Y', strtotime($expense['date_added'])); ?></span>
+                            </div>
+                        </div>
+                        <div class="settlement-status <?php echo $is_fully_settled ? 'settled' : 'pending'; ?>">
                             <i class="fas <?php echo $is_fully_settled ? 'fa-check-circle' : 'fa-clock'; ?>"></i>
                             <?php echo $is_fully_settled ? 'Settled' : 'Settlement Pending'; ?>
-                        </span>
+                        </div>
                     </div>
                 </div>
             <?php endwhile; ?>
         </div>
     <?php else: ?>
-        <p class="no-expenses">No expenses yet</p>
+        <div class="no-expenses">
+            <i class="fas fa-receipt"></i>
+            <p>No expenses yet</p>
+            <small>Add your first expense to get started</small>
+        </div>
     <?php endif; ?>
         </div>
 
@@ -828,6 +774,263 @@ $members_result = mysqli_stmt_get_result($stmt);
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.expenses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+}
+
+.expense-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid var(--nude-200);
+    overflow: hidden;
+}
+
+.expense-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(139, 69, 19, 0.15);
+}
+
+.expense-card-header {
+    background: linear-gradient(135deg, var(--brown-primary), var(--brown-hover));
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.expense-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.expense-amount {
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+}
+
+.expense-card-body {
+    padding: 15px;
+}
+
+.expense-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.meta-item i {
+    color: var(--brown-primary);
+    opacity: 0.8;
+}
+
+.settlement-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.settlement-status.settled {
+    background: rgba(74, 222, 128, 0.1);
+    color: #047857;
+}
+
+.settlement-status.pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+}
+
+.no-expenses {
+    text-align: center;
+    padding: 40px;
+    background: var(--nude-100);
+    border-radius: 12px;
+    color: var(--text-secondary);
+}
+
+.no-expenses i {
+    font-size: 2.5rem;
+    color: var(--brown-primary);
+    opacity: 0.5;
+    margin-bottom: 15px;
+}
+
+.no-expenses p {
+    font-size: 1.1rem;
+    margin: 0 0 5px 0;
+    color: var(--text-primary);
+}
+
+.no-expenses small {
+    font-size: 0.9rem;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, var(--brown-primary), var(--brown-hover));
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-header .close {
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.expense-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--nude-200);
+}
+
+.expense-details-header h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.3rem;
+    color: var(--text-primary);
+}
+
+.expense-details-header p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.expense-details-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.expense-details-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.expense-details-meta-item label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.expense-details-meta-item span {
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.shares-list {
+    border: 1px solid var(--nude-200);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.share-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--nude-200);
+}
+
+.share-item:last-child {
+    border-bottom: none;
+}
+
+.share-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.share-item-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.settle-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: var(--brown-primary);
+    color: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.settle-button:hover {
+    background: var(--brown-hover);
+}
 </style>
 
 <script>
@@ -857,11 +1060,17 @@ function openAddExpenseModal(groupId, groupName) {
 }
 
 function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'flex';
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
 
 function handleInviteMembers(groupId) {
@@ -915,8 +1124,8 @@ function showExpenseDetails(expenseId) {
                                 <span>${expense.paid_by_user}</span>
                             </div>
                             <div class="expense-details-meta-item">
-                                <label>Split Method</label>
-                                <span>${expense.split_method}</span>
+                                <label>Group</label>
+                                <span>${expense.group_name}</span>
                             </div>
                             ${expense.notes ? `
                             <div class="expense-details-meta-item">
@@ -936,11 +1145,11 @@ function showExpenseDetails(expenseId) {
                                     </div>
                                     <div class="share-item-right">
                                         <div>$${parseFloat(share.share_amount).toFixed(2)}</div>
-                                        <div class="share-status ${share.is_settled ? 'settled' : 'pending'}">
-                                            <i class="fas ${share.is_settled ? 'fa-check-circle' : 'fa-clock'}"></i>
-                                            ${share.is_settled ? 'Settled' : 'Pending'}
+                                        <div class="share-status ${share.status === 'settled' ? 'settled' : 'pending'}">
+                                            <i class="fas ${share.status === 'settled' ? 'fa-check-circle' : 'fa-clock'}"></i>
+                                            ${share.status === 'settled' ? 'Settled' : 'Pending'}
                                         </div>
-                                        ${!share.is_settled && share.user_id == ${user_id} ? `
+                                        ${share.status !== 'settled' && share.user_id == <?php echo $user_id; ?> ? `
                                             <button class="settle-button" onclick="settleExpense(${expense.expense_id}, ${share.user_id})">
                                                 Settle
                                             </button>
@@ -979,8 +1188,8 @@ function settleExpense(expenseId, userId) {
     .then(data => {
         if (data.success) {
             showToast('Expense settled successfully', 'success');
-            showExpenseDetails(expenseId); // Refresh the modal
-            // Refresh the expenses list
+            closeModal('expenseDetailsModal');
+            // Refresh the page to update the expense list
             location.reload();
         } else {
             showToast(data.error || 'Failed to settle expense', 'error');

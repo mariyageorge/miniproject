@@ -2047,8 +2047,8 @@ $diet_plans_result = $conn->query($diet_plans_query);
                         <label for="report_type">Report Type</label>
                         <select name="report_type" id="report_type" class="filter-input" required>
                             <option value="">Select Report Type</option>
-                            <option value="user_summary">User Summary</option>
-                            <option value="payment_summary">Payment Summary</option>
+                            <option value="user_details">User Management Details</option>
+                            <option value="payment_details">Payment Transaction Details</option>
                         </select>
                     </div>
                     
@@ -2078,16 +2078,19 @@ $diet_plans_result = $conn->query($diet_plans_query);
                     $start_date = $_POST['start_date'];
                     $end_date = $_POST['end_date'];
                     $report_data = [];
-                    $summary_stats = [];
 
                     switch($report_type) {
-                        case 'user_summary':
-                            $query = "SELECT role, COUNT(*) as total_users,
-                                     DATE_FORMAT(MIN(created_at), '%Y-%m-%d') as earliest_registration,
-                                     DATE_FORMAT(MAX(created_at), '%Y-%m-%d') as latest_registration
+                        case 'user_details':
+                            $query = "SELECT 
+                                     user_id,
+                                     username,
+                                     email,
+                                     role,
+                                     status,
+                                     created_at
                                      FROM users 
                                      WHERE created_at BETWEEN ? AND ?
-                                     GROUP BY role";
+                                     ORDER BY created_at DESC";
                             $stmt = $conn->prepare($query);
                             $stmt->bind_param("ss", $start_date, $end_date);
                             $stmt->execute();
@@ -2097,16 +2100,19 @@ $diet_plans_result = $conn->query($diet_plans_query);
                             }
                             break;
 
-                        case 'payment_summary':
+                        case 'payment_details':
                             $query = "SELECT 
-                                     DATE_FORMAT(payment_date, '%Y-%m') as month,
-                                     COUNT(*) as total_transactions,
-                                     SUM(CASE WHEN status = 'success' THEN amount ELSE 0 END) as total_revenue,
-                                     COUNT(CASE WHEN status = 'success' THEN 1 END) as successful_payments,
-                                     COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_payments
-                                     FROM payments 
-                                     WHERE payment_date BETWEEN ? AND ?
-                                     GROUP BY DATE_FORMAT(payment_date, '%Y-%m')";
+                                     p.id,
+                                     p.payment_id,
+                                     p.order_id,
+                                     u.username,
+                                     p.amount,
+                                     p.status,
+                                     p.payment_date
+                                     FROM payments p 
+                                     LEFT JOIN users u ON p.user_id = u.user_id 
+                                     WHERE p.payment_date BETWEEN ? AND ?
+                                     ORDER BY p.payment_date DESC";
                             $stmt = $conn->prepare($query);
                             $stmt->bind_param("ss", $start_date, $end_date);
                             $stmt->execute();
@@ -2114,73 +2120,106 @@ $diet_plans_result = $conn->query($diet_plans_query);
                             while ($row = $result->fetch_assoc()) {
                                 $report_data[] = $row;
                             }
-                            break;
-
-                        case 'all_reports':
-                            // User Statistics
-                            $user_query = "SELECT 
-                                          COUNT(*) as total_users,
-                                          COUNT(CASE WHEN role = 'premium user' THEN 1 END) as premium_users,
-                                          COUNT(CASE WHEN role = 'user' THEN 1 END) as standard_users
-                                          FROM users
-                                          WHERE created_at BETWEEN ? AND ?";
-                            $stmt = $conn->prepare($user_query);
-                            $stmt->bind_param("ss", $start_date, $end_date);
-                            $stmt->execute();
-                            $user_stats = $stmt->get_result()->fetch_assoc();
-                            
-                            // Payment Statistics
-                            $payment_query = "SELECT 
-                                            SUM(CASE WHEN status = 'success' THEN amount ELSE 0 END) as total_revenue,
-                                            COUNT(*) as total_transactions,
-                                            COUNT(CASE WHEN status = 'success' THEN 1 END) as successful_payments
-                                            FROM payments 
-                                            WHERE payment_date BETWEEN ? AND ?";
-                            $stmt = $conn->prepare($payment_query);
-                            $stmt->bind_param("ss", $start_date, $end_date);
-                            $stmt->execute();
-                            $payment_stats = $stmt->get_result()->fetch_assoc();
-                            
-                            $report_data = array_merge($user_stats, $payment_stats);
                             break;
                     }
 
                     if (!empty($report_data) && count($report_data) > 0): ?>
-                        <div class="table-responsive">
-                            <div class="action-buttons mb-3">
-                                <button class="btn btn-download" onclick="window.print()">
-                                    <i class="fas fa-file-pdf me-2"></i>Download PDF
-                                </button>
-                                <button class="btn btn-export" onclick="exportToExcel()">
-                                    <i class="fas fa-file-excel me-2"></i>Export to Excel
-                                </button>
-                            </div>
-                            <table class="users-table" id="reportTable">
-                                <thead>
-                                    <tr>
-                                        <?php 
-                                        $first_row = reset($report_data);
-                                        if ($first_row):
-                                            foreach (array_keys($first_row) as $header): 
-                                        ?>
-                                            <th><?php echo ucwords(str_replace('_', ' ', $header)); ?></th>
-                                        <?php 
-                                            endforeach;
-                                        endif;
-                                        ?>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($report_data as $row): ?>
-                                        <tr>
-                                            <?php foreach ($row as $value): ?>
-                                                <td><?php echo htmlspecialchars($value ?? 'N/A'); ?></td>
-                                            <?php endforeach; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                        <div class="action-buttons mb-3">
+                            <button class="btn btn-download" onclick="window.print()">
+                                <i class="fas fa-file-pdf me-2"></i>Download PDF
+                            </button>
+                            <button class="btn btn-export" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel me-2"></i>Export to Excel
+                            </button>
                         </div>
+
+                        <?php if ($report_type === 'user_details'): ?>
+                            <h2 class="section-title mb-4">User Management Report</h2>
+                            <div class="table-responsive">
+                                <table class="users-table" id="reportTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Username</th>
+                                            <th>Email</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th>Created At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($report_data as $row): ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($row['username']); ?></td>
+                                                <td><?php echo htmlspecialchars($row['email']); ?></td>
+                                                <td>
+                                                    <?php
+                                                    switch($row['role']) {
+                                                        case 'admin':
+                                                            echo '<span class="role-badge admin"><i class="fas fa-user-shield"></i> Admin</span>';
+                                                            break;
+                                                        case 'premium user':
+                                                            echo '<span class="role-badge premium"><i class="fas fa-crown"></i> Premium</span>';
+                                                            break;
+                                                        default:
+                                                            echo '<span class="role-badge user"><i class="fas fa-user"></i> User</span>';
+                                                    }
+                                                    ?>
+                                                </td>
+                                                <td>
+                                                    <?php if ($row['status'] == 'active'): ?>
+                                                        <span class="badge badge-active"><i class="fas fa-check-circle me-1"></i> Active</span>
+                                                    <?php else: ?>
+                                                        <span class="badge badge-inactive"><i class="fas fa-times-circle me-1"></i> Inactive</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><?php echo date('M d, Y', strtotime($row['created_at'])); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <h2 class="section-title mb-4">Payment Transaction Report</h2>
+                            <div class="table-responsive">
+                                <table class="users-table" id="reportTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Transaction ID</th>
+                                            <th>User</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($report_data as $row): ?>
+                                            <tr>
+                                                <td>#<?php echo str_pad($row['id'], 8, '0', STR_PAD_LEFT); ?></td>
+                                                <td><?php echo htmlspecialchars($row['username']); ?></td>
+                                                <td>₹<?php echo number_format($row['amount'], 2); ?></td>
+                                                <td>
+                                                    <?php
+                                                    $status_class = '';
+                                                    switch($row['status']) {
+                                                        case 'success':
+                                                            $status_class = 'badge-success';
+                                                            break;
+                                                        case 'failed':
+                                                            $status_class = 'badge-danger';
+                                                            break;
+                                                    }
+                                                    ?>
+                                                    <span class="badge <?php echo $status_class; ?>">
+                                                        <?php echo ucfirst($row['status']); ?>
+                                                    </span>
+                                                </td>
+                                                <td><?php echo date('M d, Y', strtotime($row['payment_date'])); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
                     <?php else: ?>
                         <div class="empty-state">
                             <div class="empty-state-icon">
