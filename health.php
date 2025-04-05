@@ -487,7 +487,6 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             transform: scale(1.05);
         }
 
-    
         .recommendations {
             margin-top: 15px;
         }
@@ -599,13 +598,6 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             margin: 0 auto;
         }
 
-      
-
-        .chart-container {
-            height: 250px;
-            margin-top: 15px;
-        }
-
         /* Meal Planner Styles */
         .meal-planner-grid {
             display: grid;
@@ -629,13 +621,15 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
         }
 
         .meal-time h5 {
-            margin: 0;
             color: var(--primary-brown);
+            margin-bottom: 8px;
+            font-weight: bold;
         }
 
         .meal-time p {
-            margin: 5px 0;
+            margin: 0;
             color: var(--dark-brown);
+            font-size: 1.1em;
         }
 
         .meal-planner-controls {
@@ -857,8 +851,6 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             border-top: 2px solid var(--cream);
         }
 
-     
-
         .generate-btn {
             padding: 10px 20px;
             background-color: var(--primary-brown);
@@ -939,21 +931,133 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
 
         .loading {
             text-align: center;
-            padding: 20px;
+            padding: 40px;
             color: var(--primary-brown);
             font-size: 1.2em;
         }
 
+        .loading i {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
         .error {
+            color: #dc3545;
             text-align: center;
             padding: 20px;
-            color: #dc3545;
             background: #ffe6e6;
-            border-radius: 10px;
+            border-radius: 15px;
             margin: 20px 0;
         }
 
-        /* Updated Modal Styles */
+        .daily-meals {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .meal-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .meal-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .meal-header {
+            background: var(--primary-brown);
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .meal-header h4 {
+            margin: 0;
+            font-size: 1.1em;
+        }
+
+        .calories {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+
+        .meal-content {
+            padding: 15px;
+        }
+
+        .meal-content h5 {
+            color: var(--dark-brown);
+            margin: 0;
+            font-size: 1em;
+            line-height: 1.4;
+        }
+
+        .regenerate-section {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .regenerate-btn {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .regenerate-btn:hover {
+            background: var(--dark-brown);
+            transform: scale(1.05);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: var(--primary-brown);
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 6px;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #dc3545;
+            text-align: center;
+            padding: 15px;
+            background: #ffe6e6;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        /* BMI Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -964,7 +1068,7 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             height: 100%;
             background-color: rgba(0,0,0,0.5);
             animation: fadeIn 0.3s ease;
-            overflow-y: auto; /* Enable scrolling */
+            overflow-y: auto;
         }
 
         @keyframes fadeIn {
@@ -982,8 +1086,8 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             position: relative;
             box-shadow: 0 4px 30px rgba(0,0,0,0.2);
             animation: slideIn 0.4s ease;
-            max-height: 90vh; /* Maximum height */
-            overflow-y: auto; /* Enable scrolling for content */
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         @keyframes slideIn {
@@ -1099,6 +1203,8 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            position: relative;
+            display: inline-block;
         }
 
         .metric-value {
@@ -1481,13 +1587,12 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
                 case 'water':
                     if (data.water_intake && data.water_intake.length > 0) {
                         const chartData = {
-                            labels: data.water_intake.map(entry => formatDate(entry.date)),
+                            labels: data.water_intake.map(entry => entry.date),
                             datasets: [{
-                                label: 'Water Intake (ml)',
+                                label: 'Water Intake (glasses)',
                                 data: data.water_intake.map(entry => entry.amount),
                                 borderColor: '#03A9F4',
-                                backgroundColor: 'rgba(3, 169, 244, 0.1)',
-                                fill: true
+                                fill: false
                             }]
                         };
                         html += '<canvas id="waterChart"></canvas>';
@@ -1609,55 +1714,42 @@ $current_diet_plan = getDietPlan($_SESSION['diet_type'] ?? 'maintenance');
             })
             .then(data => {
                 if (data.success) {
-                    displayMealPlan(data.data);
+                    let html = `<div class="daily-meals">`;
+                    
+                    // Order of meals
+                    const mealOrder = ['breakfast', 'lunch', 'dinner', 'snacks'];
+                    
+                    for (const mealType of mealOrder) {
+                        const meal = data.meal_plan[mealType];
+                        if (meal) {
+                            html += `
+                                <div class="meal-card">
+                                    <div class="meal-header">
+                                        <h4>${mealType.charAt(0).toUpperCase() + mealType.slice(1)}</h4>
+                                        <span class="calories">${meal.calories} cal</span>
+                                    </div>
+                                    <div class="meal-content">
+                                        <h5>${meal.name}</h5>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    html += `
+                        </div>
+                       
+                    `;
+                    
+                    grid.innerHTML = html;
                 } else {
-                    throw new Error(data.error || 'Failed to generate meal plan');
+                    grid.innerHTML = '<div class="error">Failed to generate meal plan: ' + data.message + '</div>';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                grid.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                grid.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
             });
-        }
-
-        function displayMealPlan(meals) {
-            const grid = document.getElementById('mealPlanGrid');
-            grid.innerHTML = '';
-
-            // Create a single day card
-            const dayCard = document.createElement('div');
-            dayCard.className = 'day-card';
-            
-            // Get current date
-            const today = new Date();
-            const dateStr = today.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
-
-            dayCard.innerHTML = `
-                <h4>${dateStr}</h4>
-                <div class="meal-time">
-                    <h5>Breakfast</h5>
-                    <p>${getRandomMeal(meals.breakfast)}</p>
-                </div>
-                <div class="meal-time">
-                    <h5>Lunch</h5>
-                    <p>${getRandomMeal(meals.lunch)}</p>
-                </div>
-                <div class="meal-time">
-                    <h5>Dinner</h5>
-                    <p>${getRandomMeal(meals.dinner)}</p>
-                </div>
-                <div class="meal-time">
-                    <h5>Snacks</h5>
-                    <p>${getRandomMeal(meals.snacks)}</p>
-                </div>
-            `;
-            
-            grid.appendChild(dayCard);
         }
 
         function getRandomMeal(mealArray) {
