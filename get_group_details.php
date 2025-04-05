@@ -1222,6 +1222,7 @@ function confirmLeaveGroup(groupId) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('Leave group response:', data); // Add debug logging
         if (data.success) {
             showToast('Successfully left the group', 'success');
             setTimeout(() => {
