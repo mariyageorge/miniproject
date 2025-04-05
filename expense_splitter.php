@@ -376,7 +376,7 @@ function sendInvitationEmail($email, $inviter_name, $group_name, $token, $group_
         $mail->isHTML(true);
         $mail->Subject = 'Invitation to join expense group: ' . $group_name;
         
-        $invitation_link = "http://{$_SERVER['HTTP_HOST']}/miniproject-main/accept_invitation.php?token=" . $token . "&group=" . $group_id;
+        $invitation_link = "http://{$_SERVER['HTTP_HOST']}/accept_invitation.php?token=" . $token . "&group=" . $group_id;
         
         $mail->Body = "
             <html>
