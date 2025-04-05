@@ -88,9 +88,19 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_USERPWD, $razorpay_key_id . ":" . $razorpay_key_secret);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($orderData));
 curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
 $response = curl_exec($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+if (curl_errno($ch)) {
+    error_log('cURL Error: ' . curl_error($ch));
+}
+else {
+    // Log the response for debugging
+    error_log("Razorpay Response: " . $response);
+}
+
 curl_close($ch);
 
 // Decode API response
@@ -100,6 +110,7 @@ $orderId = $order->id ?? '';
 if ($http_code !== 200 || empty($orderId)) {
     echo "<pre>Error Response from Razorpay: ";
     print_r($response);
+    error_log($http_code . " " . $response); // Log the error for debugging
     echo "</pre>";
     die("Error creating Razorpay order.");
 }
