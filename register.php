@@ -34,12 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Email validation
-    if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Please enter a valid email address";
     } else {
         $query = "SELECT * FROM users WHERE email = ?";
         $stmt = mysqli_prepare($conn, $query);
-        mysqli_stmt_bind_param($stmt, "s", $value);
+        mysqli_stmt_bind_param($stmt, "s", $email);
         mysqli_stmt_execute($stmt);
         $result = mysqli_stmt_get_result($stmt);
     
@@ -79,7 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             echo json_encode([
                 'success' => true, 
-                'message' => 'Registration successful! Redirecting to login page...'
+                'message' => 'Registration successful! Redirecting to login page...',
+                'redirect' => 'login.php'
             ]);
             exit;
         } else {
@@ -492,6 +493,7 @@ mysqli_close($conn);
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
     $(document).ready(function() {
         let otpModal = $("#otpModal");
@@ -564,8 +566,17 @@ mysqli_close($conn);
             dataType: "json",
             success: function(response) {
                 if (response.success) {
-                    alert(response.message);
-                    window.location.href = "login.php";
+                    // Show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: response.message,
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(function() {
+                        // Redirect to login page
+                        window.location.href = response.redirect;
+                    });
                 } else {
                     // Handle validation errors
                     if (response.errors) {
@@ -574,7 +585,11 @@ mysqli_close($conn);
                             $("input[name='" + field + "']").addClass("is-invalid");
                         });
                     } else {
-                        alert(response.message);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message
+                        });
                     }
                 }
             },
@@ -654,7 +669,6 @@ $(document).ready(function () {
     });
 }
     </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
