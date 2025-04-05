@@ -526,6 +526,10 @@ body {
                 <span>Upgrade to Premium</span>
             </a>
             <?php endif; ?>
+            <a href="about.php" class="nav-link about">
+    <i class="fas fa-info-circle"></i>
+    <span>About Us</span>
+</a>
 
         </nav>
     </aside>
