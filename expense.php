@@ -11,6 +11,15 @@ $username = $_SESSION['username'];
 $user_id = $_SESSION['user_id'];
 $role = $_SESSION['role'] ?? 'user';
 
+// Fetch user's currency preference
+$currency_query = "SELECT currency_symbol FROM user_currency_preferences WHERE user_id = ?";
+$stmt = mysqli_prepare($conn, $currency_query);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$currency_result = mysqli_stmt_get_result($stmt);
+$currency_pref = mysqli_fetch_assoc($currency_result);
+$currency_symbol = $currency_pref['currency_symbol'] ?? '₹'; // Default to ₹ if no preference set
+
 $sql = "CREATE TABLE IF NOT EXISTS p_expenses (
     expense_id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id INT(6) UNSIGNED,
@@ -1353,7 +1362,7 @@ if (isset($_POST['delete_expense'])) {
                                     <?php while ($row = mysqli_fetch_assoc($recent_expenses)): ?>
                                         <tr class="expense-item">
                                             <td><?php echo date('M j, Y', strtotime($row['date'])); ?></td>
-                                            <td>₹<?php echo number_format($row['amount'], 2); ?></td>
+                                            <td><?php echo $currency_symbol; ?><?php echo number_format($row['amount'], 2); ?></td>
                                             <td>
                                                 <span class="category-pill">
                                                     <i class="fas fa-tag"></i>

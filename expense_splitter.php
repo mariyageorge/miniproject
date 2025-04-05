@@ -32,6 +32,15 @@ if (!isset($_SESSION['profile_pic'])) {
 }
 $profile_pic = $_SESSION['profile_pic'];
 
+// Fetch user's currency preference
+$currency_query = "SELECT currency_symbol FROM user_currency_preferences WHERE user_id = ?";
+$stmt = mysqli_prepare($conn, $currency_query);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$currency_result = mysqli_stmt_get_result($stmt);
+$currency_pref = mysqli_fetch_assoc($currency_result);
+$currency_symbol = $currency_pref['currency_symbol'] ?? '$'; // Default to $ if no preference set
+
 // Create expense_groups table if it doesn't exist
 $create_groups_table = "CREATE TABLE IF NOT EXISTS expense_groups (
     group_id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -127,6 +136,20 @@ $create_direct_messages_table = "CREATE TABLE IF NOT EXISTS direct_messages (
 )";
 
 mysqli_query($conn, $create_direct_messages_table);
+
+// Create user_currency_preferences table
+$create_currency_prefs_table = "CREATE TABLE IF NOT EXISTS user_currency_preferences (
+    user_id INT(6) UNSIGNED NOT NULL,
+    currency_code VARCHAR(3) NOT NULL,
+    currency_symbol VARCHAR(5) NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+)";
+
+if (!mysqli_query($conn, $create_currency_prefs_table)) {
+    echo "Error creating currency preferences table: " . mysqli_error($conn);
+}
 
 // Process group creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_group']) && $is_premium) {
@@ -436,6 +459,51 @@ $pending_query_total = "SELECT SUM(es.share_amount) as total
 $pending_total_result = mysqli_query($conn, $pending_query_total);
 $total_row = mysqli_fetch_assoc($pending_total_result);
 $total_pending = $total_row['total'] ?? 0;
+
+// Handle currency preference update
+if (isset($_POST['saveSettings'])) {
+    $currency_code = mysqli_real_escape_string($conn, $_POST['defaultCurrency']);
+    $currency_symbol = mysqli_real_escape_string($conn, $_POST['currencySymbol']);
+    
+    // Check if user already has a preference
+    $check_query = "SELECT * FROM user_currency_preferences WHERE user_id = ?";
+    $stmt = mysqli_prepare($conn, $check_query);
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if (mysqli_num_rows($result) > 0) {
+        // Update existing preference
+        $update_query = "UPDATE user_currency_preferences 
+                        SET currency_code = ?, currency_symbol = ? 
+                        WHERE user_id = ?";
+        $stmt = mysqli_prepare($conn, $update_query);
+        mysqli_stmt_bind_param($stmt, "ssi", $currency_code, $currency_symbol, $user_id);
+    } else {
+        // Insert new preference
+        $insert_query = "INSERT INTO user_currency_preferences (user_id, currency_code, currency_symbol) 
+                        VALUES (?, ?, ?)";
+        $stmt = mysqli_prepare($conn, $insert_query);
+        mysqli_stmt_bind_param($stmt, "iss", $user_id, $currency_code, $currency_symbol);
+    }
+    
+    if (mysqli_stmt_execute($stmt)) {
+        $_SESSION['success_message'] = "Currency settings updated successfully!";
+    } else {
+        $_SESSION['error_message'] = "Error updating currency settings: " . mysqli_error($conn);
+    }
+    
+    header("Location: " . $_SERVER['PHP_SELF'] . "#settings");
+    exit();
+}
+
+// Get current currency preference
+$curr_query = "SELECT currency_code, currency_symbol FROM user_currency_preferences WHERE user_id = ?";
+$stmt = mysqli_prepare($conn, $curr_query);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$current_currency = mysqli_fetch_assoc($result);
 ?>
 
 <!DOCTYPE html>
@@ -1583,97 +1651,6 @@ $total_pending = $total_row['total'] ?? 0;
             color: var(--primary-color);
         }
 
-        /* Currency Converter Styles */
-        .converter-container {
-            max-width: 600px;
-            margin: 40px auto;
-        }
-
-        .converter-form {
-            background: var(--white);
-            padding: 30px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-        }
-
-        .currency-input-group {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .currency-input-group .form-control {
-            font-size: 1.2rem;
-            height: 50px;
-        }
-
-        .currency-input-group input {
-            flex: 1;
-            font-weight: 600;
-        }
-
-        .currency-select {
-            width: 200px;
-            background-color: var(--nude-100);
-            font-weight: 500;
-        }
-
-        .currency-equals {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 15px 0;
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            gap: 10px;
-        }
-
-        .equals-text {
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .conversion-info {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px dashed var(--nude-200);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .update-time, .exchange-rate {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .update-time i {
-            color: var(--primary-color);
-        }
-
-        #convertedAmount {
-            background-color: var(--nude-100);
-            color: var(--primary-color);
-            font-weight: bold;
-        }
-
-        #convertedAmount:focus {
-            background-color: var(--nude-100);
-        }
-
-        @media (max-width: 768px) {
-            .currency-input-group {
-                flex-direction: column;
-            }
-
-            .currency-select {
-                width: 100%;
-            }
-        }
-
         /* Settings Styles */
         .settings-container {
             max-width: 600px;
@@ -2326,6 +2303,130 @@ $total_pending = $total_row['total'] ?? 0;
             white-space: pre-wrap;
             color: var(--text-primary);
         }
+
+        .expense-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .expense-card-header {
+            background: var(--brown-primary);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .expense-card-header * {
+            color: white !important;
+        }
+
+        .expense-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .expense-amount {
+            font-weight: 600;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        /* Currency Converter Styles */
+.converter-container {
+    max-width: 600px;
+    margin: 40px auto;
+}
+
+.converter-form {
+    background: var(--white);
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.currency-input-group {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.currency-input-group .form-control {
+    font-size: 1.2rem;
+    height: 50px;
+}
+
+.currency-input-group input {
+    flex: 1;
+    font-weight: 600;
+}
+
+.currency-select {
+    width: 200px;
+    background-color: var(--nude-100);
+    font-weight: 500;
+}
+
+.currency-equals {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 0;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    gap: 10px;
+}
+
+.equals-text {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.conversion-info {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--nude-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.update-time, .exchange-rate {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.update-time i {
+    color: var(--primary-color);
+}
+
+#convertedAmount {
+    background-color: var(--nude-100);
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+#convertedAmount:focus {
+    background-color: var(--nude-100);
+}
+
+@media (max-width: 768px) {
+    .currency-input-group {
+        flex-direction: column;
+    }
+
+    .currency-select {
+        width: 100%;
+    }
+}
     </style>
 </head>
 <body>
@@ -2351,9 +2452,9 @@ $total_pending = $total_row['total'] ?? 0;
                 <span>Pending Expenses</span>
             </a>
             <a href="#currency-converter" class="nav-link">
-                <i class="fas fa-exchange-alt"></i>
-                <span>Currency Converter</span>
-            </a>
+        <i class="fas fa-exchange-alt"></i>
+        <span>Currency Converter</span>
+    </a>
             <a href="#settings" class="nav-link">
                 <i class="fas fa-cog"></i>
                 <span>Settings</span>
@@ -2468,7 +2569,7 @@ $total_pending = $total_row['total'] ?? 0;
                         <div class="form-group">
                             <label for="expense_amount">Amount</label>
                             <div class="amount-input-group">
-                                <span class="currency-symbol">$</span>
+                                <span class="currency-symbol"><?php echo $currency_symbol; ?></span>
                                 <input type="number" id="expense_amount" name="amount" class="form-control" 
                                        placeholder="0.00" step="0.01" min="0.01" required>
                             </div>
@@ -2619,7 +2720,7 @@ $total_pending = $total_row['total'] ?? 0;
                                     </div>
                                     <div class="group-list-meta">
                                         <span><i class="fas fa-receipt"></i> <?php echo $expense_data['count']; ?> expenses</span>
-                                        <span><i class="fas fa-money-bill-wave"></i> Total: $<?php echo number_format($expense_data['total'] ?? 0, 2); ?></span>
+                                        <span><i class="fas fa-money-bill-wave"></i> Total: <?php echo $currency_symbol; ?><?php echo number_format($expense_data['total'] ?? 0, 2); ?></span>
                                     </div>
                                 </div>
                                 <i class="fas fa-chevron-right"></i>
@@ -2655,7 +2756,7 @@ $total_pending = $total_row['total'] ?? 0;
                     <div class="pending-total">
                         <span class="pending-amount">
                             <i class="fas fa-exclamation-circle"></i>
-                            Total Pending: $<?php echo number_format($total_pending, 2); ?>
+                            Total Pending: <?php echo $currency_symbol; ?><?php echo number_format($total_pending, 2); ?>
                         </span>
                     </div>
                 </div>
@@ -2673,7 +2774,7 @@ $total_pending = $total_row['total'] ?? 0;
                                         <?php echo htmlspecialchars($expense['group_name']); ?>
                                     </div>
                                     <div class="pending-amount">
-                                        $<?php echo number_format($expense['share_amount'], 2); ?>
+                                        <?php echo $currency_symbol; ?><?php echo number_format($expense['share_amount'], 2); ?>
                                     </div>
                                 </div>
                                 <div class="pending-body">
@@ -2692,7 +2793,7 @@ $total_pending = $total_row['total'] ?? 0;
                                         </div>
                                         <div class="meta-item">
                                             <i class="fas fa-info-circle"></i>
-                                            Total expense: $<?php echo number_format($expense['amount'], 2); ?>
+                                            Total expense: <?php echo $currency_symbol; ?><?php echo number_format($expense['amount'], 2); ?>
                                         </div>
                                     </div>
                                 </div>
@@ -2717,83 +2818,103 @@ $total_pending = $total_row['total'] ?? 0;
             </div>
         <?php endif; ?>
 
-        <!-- Add Currency Converter Section -->
-        <div id="currency-converter" class="section">
-            <div class="section-title">
-                <i class="fas fa-exchange-alt"></i> Currency Converter
+<!-- Add Currency Converter Section -->
+<div id="currency-converter" class="section">
+    <div class="section-title">
+        <i class="fas fa-exchange-alt"></i> Currency Converter
+    </div>
+    <div class="converter-container">
+        <div class="converter-form">
+            <div class="currency-input-group">
+                <input type="number" id="amount" class="form-control" placeholder="Enter amount" min="0" step="0.01" required>
+                <select id="fromCurrency" class="form-control currency-select">
+                    <option value="INR">🇮🇳 INR - Indian Rupee</option>
+                    <option value="USD" selected>🇺🇸 USD - US Dollar</option>
+                    <option value="EUR">🇪🇺 EUR - Euro</option>
+                    <option value="GBP">🇬🇧 GBP - British Pound</option>
+                    <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
+                    <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+                    <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+                    <option value="CHF">🇨🇭 CHF - Swiss Franc</option>
+                    <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+                </select>
             </div>
-            <div class="converter-container">
-                <div class="converter-form">
-                    <div class="currency-input-group">
-                        <input type="number" id="amount" class="form-control" placeholder="Enter amount" min="0" step="0.01" required>
-                        <select id="fromCurrency" class="form-control currency-select">
-                            <option value="INR">🇮🇳 INR - Indian Rupee</option>
-                            <option value="USD">🇺🇸 USD - US Dollar</option>
-                            <option value="EUR">🇪🇺 EUR - Euro</option>
-                            <option value="GBP">🇬🇧 GBP - British Pound</option>
-                            <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
-                            <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
-                            <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
-                            <option value="CHF">🇨🇭 CHF - Swiss Franc</option>
-                            <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
-                        </select>
-                    </div>
-                    <div class="currency-equals">
-                        <span class="equals-text">equals</span>
-                        <i class="fas fa-equals"></i>
-                    </div>
-                    <div class="currency-input-group">
-                        <input type="text" id="convertedAmount" class="form-control" readonly>
-                        <select id="toCurrency" class="form-control currency-select">
-                            <option value="USD">🇺🇸 USD - US Dollar</option>
-                            <option value="INR">🇮🇳 INR - Indian Rupee</option>
-                            <option value="EUR">🇪🇺 EUR - Euro</option>
-                            <option value="GBP">🇬🇧 GBP - British Pound</option>
-                            <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
-                            <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
-                            <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
-                            <option value="CHF">🇨🇭 CHF - Swiss Franc</option>
-                            <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
-                        </select>
-                    </div>
-                    <div class="conversion-info" id="conversionInfo">
-                        <div class="update-time">
-                            <i class="far fa-clock"></i>
-                            Last updated: <span id="lastUpdate"></span>
-                        </div>
-                        <div class="exchange-rate" id="exchangeRate"></div>
-                    </div>
+            <div class="currency-equals">
+                <span class="equals-text">equals</span>
+                <i class="fas fa-equals"></i>
+            </div>
+            <div class="currency-input-group">
+                <input type="text" id="convertedAmount" class="form-control" readonly>
+                <select id="toCurrency" class="form-control currency-select">
+                    <option value="INR" selected>🇮🇳 INR - Indian Rupee</option>
+                    <option value="USD">🇺🇸 USD - US Dollar</option>
+                    <option value="EUR">🇪🇺 EUR - Euro</option>
+                    <option value="GBP">🇬🇧 GBP - British Pound</option>
+                    <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
+                    <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+                    <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+                    <option value="CHF">🇨🇭 CHF - Swiss Franc</option>
+                    <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+                </select>
+            </div>
+            <div class="conversion-info" id="conversionInfo">
+                <div class="update-time">
+                    <i class="far fa-clock"></i>
+                    Last updated: <span id="lastUpdate"></span>
                 </div>
+                <div class="exchange-rate" id="exchangeRate"></div>
             </div>
         </div>
-
+    </div>
+</div>
         <!-- Add Settings Section -->
         <div id="settings" class="section">
             <div class="section-title">
                 <i class="fas fa-cog"></i> Settings
             </div>
             <div class="settings-container">
-                <div class="settings-form">
-                    <div class="form-group">
-                        <label for="defaultCurrency">
-                            <i class="fas fa-globe"></i> Default Currency
-                        </label>
-                        <select id="defaultCurrency" class="form-control currency-select">
-                            <option value="INR" data-symbol="₹">🇮🇳 INR - Indian Rupee</option>
-                            <option value="USD" data-symbol="$">🇺🇸 USD - US Dollar</option>
-                            <option value="EUR" data-symbol="€">🇪🇺 EUR - Euro</option>
-                            <option value="GBP" data-symbol="£">🇬🇧 GBP - British Pound</option>
-                            <option value="JPY" data-symbol="¥">🇯🇵 JPY - Japanese Yen</option>
-                            <option value="AUD" data-symbol="A$">🇦🇺 AUD - Australian Dollar</option>
-                            <option value="CAD" data-symbol="C$">🇨🇦 CAD - Canadian Dollar</option>
-                            <option value="CHF" data-symbol="Fr">🇨🇭 CHF - Swiss Franc</option>
-                            <option value="CNY" data-symbol="¥">🇨🇳 CNY - Chinese Yuan</option>
-                        </select>
-                        <small class="form-text">This currency will be used as default throughout the application.</small>
+                <?php if (isset($_SESSION['success_message'])): ?>
+                    <div class="alert alert-success">
+                        <?php 
+                        echo $_SESSION['success_message'];
+                        unset($_SESSION['success_message']);
+                        ?>
                     </div>
-                    <button id="saveSettings" class="button">
-                        <i class="fas fa-save"></i> Save Settings
-                    </button>
+                <?php endif; ?>
+                
+                <?php if (isset($_SESSION['error_message'])): ?>
+                    <div class="alert alert-danger">
+                        <?php 
+                        echo $_SESSION['error_message'];
+                        unset($_SESSION['error_message']);
+                        ?>
+                    </div>
+                <?php endif; ?>
+                
+                <div class="settings-form">
+                    <form method="POST" action="">
+                        <div class="form-group">
+                            <label for="defaultCurrency">
+                                <i class="fas fa-globe"></i> Default Currency
+                            </label>
+                            <select id="defaultCurrency" name="defaultCurrency" class="form-control currency-select">
+                                <option value="INR" data-symbol="₹" <?php echo ($current_currency['currency_code'] == 'INR') ? 'selected' : ''; ?>>🇮🇳 INR - Indian Rupee</option>
+                                <option value="USD" data-symbol="$" <?php echo ($current_currency['currency_code'] == 'USD') ? 'selected' : ''; ?>>🇺🇸 USD - US Dollar</option>
+                                <option value="EUR" data-symbol="€" <?php echo ($current_currency['currency_code'] == 'EUR') ? 'selected' : ''; ?>>🇪🇺 EUR - Euro</option>
+                                <option value="GBP" data-symbol="£" <?php echo ($current_currency['currency_code'] == 'GBP') ? 'selected' : ''; ?>>🇬🇧 GBP - British Pound</option>
+                                <option value="JPY" data-symbol="¥" <?php echo ($current_currency['currency_code'] == 'JPY') ? 'selected' : ''; ?>>🇯🇵 JPY - Japanese Yen</option>
+                                <option value="AUD" data-symbol="A$" <?php echo ($current_currency['currency_code'] == 'AUD') ? 'selected' : ''; ?>>🇦🇺 AUD - Australian Dollar</option>
+                                <option value="CAD" data-symbol="C$" <?php echo ($current_currency['currency_code'] == 'CAD') ? 'selected' : ''; ?>>🇨🇦 CAD - Canadian Dollar</option>
+                                <option value="CHF" data-symbol="Fr" <?php echo ($current_currency['currency_code'] == 'CHF') ? 'selected' : ''; ?>>🇨🇭 CHF - Swiss Franc</option>
+                                <option value="CNY" data-symbol="¥" <?php echo ($current_currency['currency_code'] == 'CNY') ? 'selected' : ''; ?>>🇨🇳 CNY - Chinese Yuan</option>
+                            </select>
+                            <input type="hidden" name="currencySymbol" id="currencySymbol" value="<?php echo $current_currency['currency_symbol'] ?? '₹'; ?>">
+                            <small class="form-text">This currency will be used as default throughout the application.</small>
+                        </div>
+                        <button type="submit" name="saveSettings" class="button">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -2972,7 +3093,7 @@ $total_pending = $total_row['total'] ?? 0;
                         <div class="error-message">
                             <i class="fas fa-exclamation-circle"></i>
                             <p>Failed to load group details. Please try again.</p>
-                        </div>
+                        </div>i
                     `;
                     showToast('Failed to load group details', 'error');
                 });
@@ -3302,100 +3423,6 @@ $total_pending = $total_row['total'] ?? 0;
                 }
             });
         }
-
-        // Currency Converter Functions
-        async function convertCurrency() {
-            const amount = document.getElementById('amount').value;
-            const fromCurrency = document.getElementById('fromCurrency').value;
-            const toCurrency = document.getElementById('toCurrency').value;
-            const convertedAmountInput = document.getElementById('convertedAmount');
-            const exchangeRateDiv = document.getElementById('exchangeRate');
-            const lastUpdateSpan = document.getElementById('lastUpdate');
-
-            if (!amount || amount <= 0) {
-                convertedAmountInput.value = '';
-                exchangeRateDiv.textContent = '';
-                return;
-            }
-
-            try {
-                const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
-                const data = await response.json();
-
-                if (!data.rates || !data.rates[toCurrency]) {
-                    throw new Error('Invalid currency conversion');
-                }
-
-                const rate = data.rates[toCurrency];
-                const convertedAmount = (amount * rate).toFixed(3);
-                const currentTime = new Date().toLocaleTimeString();
-                const toSymbol = document.querySelector(`#defaultCurrency option[value="${toCurrency}"]`).dataset.symbol;
-
-                convertedAmountInput.value = `${toSymbol}${convertedAmount}`;
-                exchangeRateDiv.innerHTML = `<i class="fas fa-chart-line"></i> 1 ${fromCurrency} = ${toSymbol}${rate.toFixed(3)}`;
-                lastUpdateSpan.textContent = currentTime;
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Failed to convert currency', 'error');
-                convertedAmountInput.value = 'Error converting';
-                exchangeRateDiv.textContent = '';
-            }
-        }
-
-        // Add event listeners for currency conversion
-        document.getElementById('amount').addEventListener('input', convertCurrency);
-        document.getElementById('fromCurrency').addEventListener('change', convertCurrency);
-        document.getElementById('toCurrency').addEventListener('change', convertCurrency);
-
-        // Settings functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load saved currency preference
-            const savedCurrency = localStorage.getItem('defaultCurrency') || 'INR';
-            document.getElementById('defaultCurrency').value = savedCurrency;
-            updateCurrencyDisplay(savedCurrency);
-
-            // Save settings
-            document.getElementById('saveSettings').addEventListener('click', function() {
-                const selectedCurrency = document.getElementById('defaultCurrency').value;
-                localStorage.setItem('defaultCurrency', selectedCurrency);
-                updateCurrencyDisplay(selectedCurrency);
-                showToast('Settings saved successfully', 'success');
-            });
-        });
-
-        function updateCurrencyDisplay(currency) {
-            const currencySymbol = document.querySelector(`#defaultCurrency option[value="${currency}"]`).dataset.symbol;
-            
-            // Update all currency amounts
-            document.querySelectorAll('.currency-amount').forEach(element => {
-                const amount = element.dataset.amount;
-                element.textContent = `${currencySymbol}${Number(amount).toFixed(2)}`;
-            });
-
-            // Update all currency displays in pending expenses
-            document.querySelectorAll('.pending-amount').forEach(element => {
-                const amount = element.textContent.replace(/[^0-9.]/g, '');
-                element.textContent = `${currencySymbol}${amount}`;
-            });
-
-            // Set default currency in converter
-            const fromCurrency = document.getElementById('fromCurrency');
-            if (fromCurrency) {
-                fromCurrency.value = currency;
-                convertCurrency(); // Trigger conversion with new currency
-            }
-        }
-
-        // Initialize currency display on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedCurrency = localStorage.getItem('defaultCurrency') || 'INR';
-            updateCurrencyDisplay(savedCurrency);
-            
-            // Set initial currency selection
-            if (document.getElementById('defaultCurrency')) {
-                document.getElementById('defaultCurrency').value = savedCurrency;
-            }
-        });
 
         // Function to handle invite members button click
         function handleInviteMembers(groupId) {
@@ -3730,6 +3757,7 @@ $total_pending = $total_row['total'] ?? 0;
                 .then(data => {
                     if (data.success) {
                         const expense = data.expense;
+                        const currencySymbol = data.currency_symbol;
                         const content = `
                             <div class="expense-details">
                                 <div class="expense-details-header">
@@ -3737,7 +3765,7 @@ $total_pending = $total_row['total'] ?? 0;
                                         <h3>${expense.description}</h3>
                                         <p class="text-secondary">Added on ${expense.date_added}</p>
                                     </div>
-                                    <div class="expense-amount">$${parseFloat(expense.amount).toFixed(2)}</div>
+                                    <div class="expense-amount">${currencySymbol}${parseFloat(expense.amount).toFixed(2)}</div>
                                 </div>
                                 
                                 <div class="expense-details-meta">
@@ -3773,7 +3801,7 @@ $total_pending = $total_row['total'] ?? 0;
                                                 ${share.username}
                                             </div>
                                             <div class="share-item-right">
-                                                <div>$${parseFloat(share.share_amount).toFixed(2)}</div>
+                                                <div>${currencySymbol}${parseFloat(share.share_amount).toFixed(2)}</div>
                                                 <div class="share-status ${share.status === 'settled' ? 'settled' : 'pending'}">
                                                     <i class="fas ${share.status === 'settled' ? 'fa-check-circle' : 'fa-clock'}"></i>
                                                     ${share.status === 'settled' ? 'Settled' : 'Pending'}
@@ -3824,6 +3852,94 @@ $total_pending = $total_row['total'] ?? 0;
                 showToast('Failed to settle expense', 'error');
             });
         }
+// Currency Converter Functions
+let exchangeRates = {};
+let lastUpdated = '';
+
+// Fetch exchange rates and initialize converter
+async function initCurrencyConverter() {
+    await fetchExchangeRates();
+    setupConversionListeners();
+    convertCurrency(); // Initial conversion if there's a default amount
+}
+
+// Fetch exchange rates from API
+async function fetchExchangeRates() {
+    try {
+        // Using a free API (you might want to use a more reliable API in production)
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await response.json();
+        exchangeRates = data.rates;
+        lastUpdated = new Date(data.date).toLocaleString();
+        document.getElementById('lastUpdate').textContent = lastUpdated;
+        return true;
+    } catch (error) {
+        console.error('Error fetching exchange rates:', error);
+        // Fallback rates in case API fails
+        exchangeRates = {
+            USD: 1,
+            INR: 83.0,  // Updated rate
+            EUR: 0.93,  // Updated rate
+            GBP: 0.79,  // Updated rate
+            JPY: 151.0, // Updated rate
+            AUD: 1.52,  // Updated rate
+            CAD: 1.37,  // Updated rate
+            CHF: 0.91,  // Updated rate
+            CNY: 7.24   // Updated rate
+        };
+        lastUpdated = new Date().toLocaleString();
+        document.getElementById('lastUpdate').textContent = lastUpdated + ' (offline rates)';
+        return false;
+    }
+}
+
+// Set up event listeners for real-time conversion
+function setupConversionListeners() {
+    const amountInput = document.getElementById('amount');
+    const fromCurrency = document.getElementById('fromCurrency');
+    const toCurrency = document.getElementById('toCurrency');
+
+    // Real-time conversion on input
+    amountInput.addEventListener('input', convertCurrency);
+    
+    // Also convert when currencies change
+    fromCurrency.addEventListener('change', convertCurrency);
+    toCurrency.addEventListener('change', convertCurrency);
+    
+    // Convert when any of these events occur
+    amountInput.addEventListener('change', convertCurrency);
+    amountInput.addEventListener('keyup', convertCurrency);
+}
+
+// Perform the actual conversion
+function convertCurrency() {
+    const amount = parseFloat(document.getElementById('amount').value);
+    const fromCurrency = document.getElementById('fromCurrency').value;
+    const toCurrency = document.getElementById('toCurrency').value;
+    const convertedAmountInput = document.getElementById('convertedAmount');
+    const exchangeRateDiv = document.getElementById('exchangeRate');
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+        convertedAmountInput.value = '';
+        exchangeRateDiv.textContent = '';
+        return;
+    }
+
+    // Calculate conversion
+    const fromRate = exchangeRates[fromCurrency] || 1;
+    const toRate = exchangeRates[toCurrency] || 1;
+    const convertedAmount = (amount / fromRate * toRate).toFixed(2);
+    
+    // Get currency symbol
+    const symbol = document.querySelector(`#toCurrency option[value="${toCurrency}"]`)?.textContent.match(/[^\w\s]/)?.[0] || toCurrency;
+    
+    // Update the UI
+    convertedAmountInput.value = `${symbol}${convertedAmount}`;
+    exchangeRateDiv.innerHTML = `<i class="fas fa-chart-line"></i> 1 ${fromCurrency} = ${symbol}${(toRate / fromRate).toFixed(4)}`;
+}
+
+// Initialize currency converter when DOM is loaded
+document.addEventListener('DOMContentLoaded', initCurrencyConverter);
     </script>
 </body>
 </html>

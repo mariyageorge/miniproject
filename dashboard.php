@@ -541,7 +541,6 @@ body {
                 <p>Organize your daily tasks efficiently with smart reminders and priority tracking ✨</p>
                 <a href="todo.php" class="button">Get Started</a>
             </div>
-            
             <div class="card">
                 <div class="icon-container">
                     <i class="icon fas fa-coins"></i>
@@ -585,8 +584,6 @@ body {
         <p>Record your thoughts, feelings, and daily experiences in a private journal 📖</p>
         <a href="diary.php" class="button">Start Writing</a>
     </div>
-</div>
-        </div>
     </div>
     <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -606,32 +603,50 @@ body {
 </script>
 <script>
 function fetchNotifications() {
-    fetch('notification.php')
-        .then(response => response.json())
+    <script>
+function fetchNotifications() {
+    fetch('get_notifications.php') // Changed to a dedicated API endpoint
+        .then(response => {
+            // First check if the response is OK
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            // Check content type to ensure it's JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new TypeError("Oops, we didn't get JSON!");
+            }
+            return response.json();
+        })
         .then(data => {
-            let notificationList = document.getElementById("notificationList");
             let notificationCount = document.getElementById("notificationCount");
-
-            notificationList.innerHTML = "";
+            
             if (data.length > 0) {
                 notificationCount.textContent = data.length;
                 notificationCount.style.display = "inline";
-                
-                data.forEach(notification => {
-                    let listItem = document.createElement("li");
-                    listItem.textContent = notification.message + " - " + notification.created_at;
-                    notificationList.appendChild(listItem);
-                });
             } else {
                 notificationCount.style.display = "none";
             }
         })
-        .catch(error => console.error("Error fetching notifications:", error));
+        .catch(error => {
+            console.error("Error fetching notifications:", error);
+            // Optional: Update UI to show error state
+        });
 }
 
-// Fetch notifications every 5 seconds
-setInterval(fetchNotifications, 5000);
-fetchNotifications(); // Initial load
+// Fetch notifications every 30 seconds instead of 5 to reduce load
+const notificationInterval = setInterval(fetchNotifications, 30000);
+
+// Initial load when DOM is ready
+document.addEventListener("DOMContentLoaded", function() {
+    fetchNotifications();
+    
+    // Clean up interval when leaving page
+    window.addEventListener('beforeunload', function() {
+        clearInterval(notificationInterval);
+    });
+});
+</script>
 </script>
 
 </body>

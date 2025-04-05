@@ -209,6 +209,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch existing meal plans
 $diet_plans_query = "SELECT * FROM diet_plans ORDER BY meal_type, created_at DESC";
 $diet_plans_result = $conn->query($diet_plans_query);
+
+$user_id = $_SESSION['user_id'];
+
+// Fetch user's currency preference
+$currency_query = "SELECT currency_symbol FROM user_currency_preferences WHERE user_id = ?";
+$stmt = mysqli_prepare($conn, $currency_query);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$currency_result = mysqli_stmt_get_result($stmt);
+$currency_pref = mysqli_fetch_assoc($currency_result);
+$currency_symbol = $currency_pref['currency_symbol'] ?? '₹'; // Default to ₹ if no preference set
 ?>
 
 <!DOCTYPE html>
@@ -1935,7 +1946,7 @@ $diet_plans_result = $conn->query($diet_plans_query);
                                 <tr>
                                     <td>#<?php echo str_pad($payment['id'], 8, '0', STR_PAD_LEFT); ?></td>
                                     <td><?php echo htmlspecialchars($payment['username']); ?></td>
-                                    <td>₹<?php echo number_format($payment['amount'], 2); ?></td>
+                                    <td><?php echo $currency_symbol; ?><?php echo number_format($payment['amount'], 2); ?></td>
                                     <td>
                                         <?php
                                         $status_class = '';
@@ -1993,7 +2004,7 @@ $diet_plans_result = $conn->query($diet_plans_query);
                                                     </div>
                                                     <div class="detail-row">
                                                         <span class="detail-label">Amount:</span>
-                                                        <span class="detail-value">₹<?php echo number_format($payment['amount'], 2); ?></span>
+                                                        <span class="detail-value"><?php echo $currency_symbol; ?><?php echo number_format($payment['amount'], 2); ?></span>
                                                     </div>
                                                     <div class="detail-row">
                                                         <span class="detail-label">Status:</span>
@@ -2196,7 +2207,7 @@ $diet_plans_result = $conn->query($diet_plans_query);
                                             <tr>
                                                 <td>#<?php echo str_pad($row['id'], 8, '0', STR_PAD_LEFT); ?></td>
                                                 <td><?php echo htmlspecialchars($row['username']); ?></td>
-                                                <td>₹<?php echo number_format($row['amount'], 2); ?></td>
+                                                <td><?php echo $currency_symbol; ?><?php echo number_format($row['amount'], 2); ?></td>
                                                 <td>
                                                     <?php
                                                     $status_class = '';

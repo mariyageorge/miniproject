@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 if (!isset($_SESSION['username'])) {
@@ -59,6 +58,15 @@ if ($stmt) {
 
 // Set default values for premium subscription
 $amount = 199.00; // Default amount from upgrade page
+
+// Fetch user's currency preference
+$currency_query = "SELECT currency_symbol FROM user_currency_preferences WHERE user_id = ?";
+$stmt = mysqli_prepare($conn, $currency_query);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$currency_result = mysqli_stmt_get_result($stmt);
+$currency_pref = mysqli_fetch_assoc($currency_result);
+$currency_symbol = $currency_pref['currency_symbol'] ?? '₹'; // Default to ₹ if no preference set
 
 // Razorpay credentials
 $razorpay_key_id = "rzp_test_j6ZARUQlnkvesy";
@@ -648,7 +656,7 @@ body {
                                     </tr>
                                     <tr class="price-row">
                                         <th>Amount</th>
-                                        <td>₹ <?php echo number_format($amount, 2); ?></td>
+                                        <td><?php echo $currency_symbol; ?> <?php echo number_format($amount, 2); ?></td>
                                     </tr>
                                 </table>
                                 
@@ -698,7 +706,7 @@ body {
                                     </div>
                                     
                                     <button type="button" class="pay-button" id="razorpay-button">
-                                        <i class="fas fa-lock"></i> Pay ₹<?php echo number_format($amount, 2); ?>
+                                        <i class="fas fa-lock"></i> Pay <?php echo $currency_symbol; ?><?php echo number_format($amount, 2); ?>
                                     </button>
                                 </form>
                                 
