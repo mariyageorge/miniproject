@@ -2570,6 +2570,7 @@ $current_currency = mysqli_fetch_assoc($result);
                             <label for="expense_amount">Amount</label>
                             <div class="amount-input-group">
                                 <span class="currency-symbol"><?php echo $currency_symbol; ?></span>
+                            
                                 <input type="number" id="expense_amount" name="amount" class="form-control" 
                                        placeholder="0.00" step="0.01" min="0.01" required>
                             </div>
@@ -3550,7 +3551,7 @@ $current_currency = mysqli_fetch_assoc($result);
                                 </div>
                                 <div class="member-details">
                                     <div class="member-name">${member.username}</div>
-                                    <div class="split-amount">$${splitAmount}</div>
+                                    <div class="split-amount"><?php echo $currency_symbol; ?>${splitAmount}</div>
                                 </div>
                                 <input type="${inputType}" 
                                        class="form-control split-input" 
