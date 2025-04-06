@@ -2516,10 +2516,10 @@ $current_currency = mysqli_fetch_assoc($result);
                     <div class="form-group">
                         <label for="inviteTagInput">Add Members (Enter email and press Enter)</label>
                         <div class="tag-input-container" id="inviteTagContainer">
-                            <input type="text" id="inviteTagInput" class="tag-input" placeholder="Enter email addresses">
+                            <input type="text" id="invite_members" name="members" class="tag-input" placeholder="Enter email addresses" value="">
                         </div>
-                        <input type="hidden" id="invite_members" name="members">
-                        <input type="hidden" id="invite_group_id" name="group_id">
+                        <!-- <input type="hidden" id="invite_members" name="members" value=""/> -->
+                        <input type="hidden" id="invite_group_id" name="group_id" value=""/>
                     </div>
                 </form>
             </div>
@@ -2891,6 +2891,10 @@ $current_currency = mysqli_fetch_assoc($result);
                     </div>
                 <?php endif; ?>
                 
+                <?php 
+                $userCurrency = $current_currency['currency_code'] ?? 'INR';
+                ?>
+                
                 <div class="settings-form">
                     <form method="POST" action="">
                         <div class="form-group">
@@ -2898,15 +2902,15 @@ $current_currency = mysqli_fetch_assoc($result);
                                 <i class="fas fa-globe"></i> Default Currency
                             </label>
                             <select id="defaultCurrency" name="defaultCurrency" class="form-control currency-select">
-                                <option value="INR" data-symbol="₹" <?php echo ($current_currency['currency_code'] == 'INR') ? 'selected' : ''; ?>>🇮🇳 INR - Indian Rupee</option>
-                                <option value="USD" data-symbol="$" <?php echo ($current_currency['currency_code'] == 'USD') ? 'selected' : ''; ?>>🇺🇸 USD - US Dollar</option>
-                                <option value="EUR" data-symbol="€" <?php echo ($current_currency['currency_code'] == 'EUR') ? 'selected' : ''; ?>>🇪🇺 EUR - Euro</option>
-                                <option value="GBP" data-symbol="£" <?php echo ($current_currency['currency_code'] == 'GBP') ? 'selected' : ''; ?>>🇬🇧 GBP - British Pound</option>
-                                <option value="JPY" data-symbol="¥" <?php echo ($current_currency['currency_code'] == 'JPY') ? 'selected' : ''; ?>>🇯🇵 JPY - Japanese Yen</option>
-                                <option value="AUD" data-symbol="A$" <?php echo ($current_currency['currency_code'] == 'AUD') ? 'selected' : ''; ?>>🇦🇺 AUD - Australian Dollar</option>
-                                <option value="CAD" data-symbol="C$" <?php echo ($current_currency['currency_code'] == 'CAD') ? 'selected' : ''; ?>>🇨🇦 CAD - Canadian Dollar</option>
-                                <option value="CHF" data-symbol="Fr" <?php echo ($current_currency['currency_code'] == 'CHF') ? 'selected' : ''; ?>>🇨🇭 CHF - Swiss Franc</option>
-                                <option value="CNY" data-symbol="¥" <?php echo ($current_currency['currency_code'] == 'CNY') ? 'selected' : ''; ?>>🇨🇳 CNY - Chinese Yuan</option>
+                                <option value="INR" data-symbol="₹" <?php echo ($userCurrency == 'INR') ? 'selected' : ''; ?>>🇮🇳 INR - Indian Rupee</option>
+                                <option value="USD" data-symbol="$" <?php echo ($userCurrency == 'USD') ? 'selected' : ''; ?>>🇺🇸 USD - US Dollar</option>
+                                <option value="EUR" data-symbol="€" <?php echo ($userCurrency == 'EUR') ? 'selected' : ''; ?>>🇪🇺 EUR - Euro</option>
+                                <option value="GBP" data-symbol="£" <?php echo ($userCurrency == 'GBP') ? 'selected' : ''; ?>>🇬🇧 GBP - British Pound</option>
+                                <option value="JPY" data-symbol="¥" <?php echo ($userCurrency == 'JPY') ? 'selected' : ''; ?>>🇯🇵 JPY - Japanese Yen</option>
+                                <option value="AUD" data-symbol="A$" <?php echo ($userCurrency == 'AUD') ? 'selected' : ''; ?>>🇦🇺 AUD - Australian Dollar</option>
+                                <option value="CAD" data-symbol="C$" <?php echo ($userCurrency == 'CAD') ? 'selected' : ''; ?>>🇨🇦 CAD - Canadian Dollar</option>
+                                <option value="CHF" data-symbol="Fr" <?php echo ($userCurrency == 'CHF') ? 'selected' : ''; ?>>🇨🇭 CHF - Swiss Franc</option>
+                                <option value="CNY" data-symbol="¥" <?php echo ($userCurrency == 'CNY') ? 'selected' : ''; ?>>🇨🇳 CNY - Chinese Yuan</option>
                             </select>
                             <input type="hidden" name="currencySymbol" id="currencySymbol" value="<?php echo $current_currency['currency_symbol'] ?? '₹'; ?>">
                             <small class="form-text">This currency will be used as default throughout the application.</small>
@@ -3338,7 +3342,7 @@ $current_currency = mysqli_fetch_assoc($result);
         });
 
         // Show balance overview by default
-        document.getElementById('balance-overview').classList.add('active');
+        document.getElementById('balance-overview')?.classList.add('active');
 
         function showGroupDetails(groupId) {
             // Hide all sections
