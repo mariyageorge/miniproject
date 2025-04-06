@@ -256,7 +256,7 @@
                                 <img src="images/slide3.jpg" class="d-block w-100" alt="Image 3" width="300" height="390">
                             </div>
                             <div class="carousel-item" data-bs-interval="1900">
-                              <img src="images/slide4.webp" class="d-block w-100" alt="Image 4" width="300" height="390">
+                              <img src="images/slide4.jpeg" class="d-block w-100" alt="Image 4" width="300" height="390">
                           </div>
                         </div>
                         <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">

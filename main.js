@@ -25,7 +25,6 @@ googleLogin.addEventListener("click", function () {
             const user = result.user;
             console.log("✅ Google Sign-In Successful:", user);
 
-            // Send user details to backend
             fetch("login.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
