@@ -3,13 +3,13 @@ import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstati
 
 // Firebase Configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDsEXAOHEhdNEytfFHKP33U2xnoKfWui0g",
-    authDomain: "signup-c33ba.firebaseapp.com",
-    projectId: "signup-c33ba",
-    storageBucket: "signup-c33ba.firebasestorage.app",
-    messagingSenderId: "469751394942",
-    appId: "1:469751394942:web:af2c338f00ffa4b1769e2f"
-};
+    apiKey: "AIzaSyD1ypqe4qBoNz7l4qMLrRhSmbdqX_egoHQ",
+    authDomain: "miniproject-25541.firebaseapp.com",
+    projectId: "miniproject-25541",
+    storageBucket: "miniproject-25541.firebasestorage.app",
+    messagingSenderId: "521990011127",
+    appId: "1:521990011127:web:db81c7bb4773a8d21a3bf2"
+  };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

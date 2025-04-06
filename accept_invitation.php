@@ -1,8 +1,6 @@
 <?php
 include("connect.php");
 session_start();
-
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header("Location: login.php");
@@ -19,7 +17,6 @@ if (empty($token) || empty($group_id)) {
     exit();
 }
 
-// Check if invitation exists and is valid
 $check_invitation = "SELECT * FROM group_members 
                     WHERE group_id = ? 
                     AND user_id = ? 
@@ -37,7 +34,6 @@ if (mysqli_num_rows($result) === 0) {
     exit();
 }
 
-// Get group details
 $group_query = "SELECT group_name FROM expense_groups WHERE group_id = ?";
 $stmt = mysqli_prepare($conn, $group_query);
 mysqli_stmt_bind_param($stmt, "i", $group_id);

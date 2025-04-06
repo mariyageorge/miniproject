@@ -2,29 +2,24 @@
 session_start();
 include("connect.php");
 
-// Debug logging
 error_log("Expense submission received");
 error_log("POST data: " . print_r($_POST, true));
 error_log("FILES data: " . print_r($_FILES, true));
 error_log("SESSION data: " . print_r($_SESSION, true));
 
-// Set content type to JSON
 header('Content-Type: application/json');
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'error' => 'User not logged in']);
     exit;
 }
 
-// Check if it's a POST request
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Invalid request method']);
     exit;
 }
 
 try {
-    // Get form data
     $group_id = mysqli_real_escape_string($conn, $_POST['group_id']);
     $description = mysqli_real_escape_string($conn, $_POST['description']);
     $amount = floatval($_POST['amount']);
@@ -33,16 +28,13 @@ try {
     $date = mysqli_real_escape_string($conn, $_POST['date']);
     $notes = isset($_POST['notes']) ? mysqli_real_escape_string($conn, $_POST['notes']) : '';
 
-    // Validate required fields
     if (empty($group_id) || empty($description) || $amount <= 0) {
         echo json_encode(['success' => false, 'error' => 'Please fill in all required fields']);
         exit;
     }
 
-    // Start transaction
     mysqli_begin_transaction($conn);
 
-    // Handle file upload if present
     $receipt_path = null;
     if (isset($_FILES['receipt_image']) && $_FILES['receipt_image']['error'] === UPLOAD_ERR_OK) {
         $upload_dir = 'uploads/receipts/';
@@ -63,7 +55,6 @@ try {
         }
     }
 
-    // Insert expense record
     $query = "INSERT INTO expenses (group_id, description, amount, paid_by, date_added, notes, receipt_image) 
               VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmt = mysqli_prepare($conn, $query);
@@ -75,10 +66,8 @@ try {
 
     $expense_id = mysqli_insert_id($conn);
 
-    // Process splits based on method
     $splits = [];
     if ($split_method === 'equal') {
-        // Get number of group members
         $member_query = "SELECT user_id FROM group_members WHERE group_id = ? AND invitation_status = 'accepted'";
         $stmt = mysqli_prepare($conn, $member_query);
         mysqli_stmt_bind_param($stmt, "i", $group_id);
@@ -92,7 +81,7 @@ try {
 
         $share_amount = $amount / $member_count;
         while ($member = mysqli_fetch_assoc($result)) {
-            if ($member['user_id'] != $paid_by) { // Don't create share for the payer
+            if ($member['user_id'] != $paid_by) { 
                 $splits[] = [
                     'user_id' => $member['user_id'],
                     'amount' => $share_amount
@@ -100,7 +89,6 @@ try {
             }
         }
     } else if ($split_method === 'percentage') {
-        // Process percentage splits
         foreach ($_POST['splits'] as $user_id => $percentage) {
             if ($user_id != $paid_by && is_numeric($percentage) && $percentage > 0) {
                 $splits[] = [
@@ -110,7 +98,6 @@ try {
             }
         }
     } else if ($split_method === 'exact') {
-        // Process exact amount splits
         foreach ($_POST['splits'] as $user_id => $split_amount) {
             if ($user_id != $paid_by && is_numeric($split_amount) && floatval($split_amount) > 0) {
                 $splits[] = [
@@ -121,12 +108,10 @@ try {
         }
     }
 
-    // Validate splits
     if (empty($splits)) {
         throw new Exception('No valid splits provided');
     }
 
-    // For percentage splits, verify total is 100%
     if ($split_method === 'percentage') {
         $total_percentage = 0;
         foreach ($_POST['splits'] as $percentage) {
@@ -137,7 +122,6 @@ try {
         }
     }
 
-    // For exact splits, verify total matches expense amount
     if ($split_method === 'exact') {
         $total_split = 0;
         foreach ($splits as $split) {
@@ -148,7 +132,6 @@ try {
         }
     }
 
-    // Insert expense shares
     $share_query = "INSERT INTO expense_shares (expense_id, user_id, share_amount, status) VALUES (?, ?, ?, 'pending')";
     $stmt = mysqli_prepare($conn, $share_query);
 
@@ -159,7 +142,6 @@ try {
         }
     }
 
-    // Commit transaction
     mysqli_commit($conn);
 
     echo json_encode([
@@ -169,10 +151,8 @@ try {
     ]);
 
 } catch (Exception $e) {
-    // Rollback transaction on error
     mysqli_rollback($conn);
 
-    // Delete uploaded file if exists
     if (isset($receipt_path) && file_exists($receipt_path)) {
         unlink($receipt_path);
     }
@@ -183,6 +163,5 @@ try {
     ]);
 }
 
-// Close database connection
 mysqli_close($conn);
 ?> 
