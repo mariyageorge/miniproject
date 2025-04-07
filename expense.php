@@ -53,66 +53,83 @@ if (!mysqli_query($conn, $sql)) {
 
 // Handle expense submission
 if (isset($_POST['add_expense'])) {
-    $amount = mysqli_real_escape_string($conn, $_POST['amount']);
+    $amount = trim($_POST['amount']);
     $description = mysqli_real_escape_string($conn, $_POST['description']);
     $category = mysqli_real_escape_string($conn, $_POST['category']);
     $date = mysqli_real_escape_string($conn, $_POST['date']) ?: date('Y-m-d');
-    
+
     // Validate inputs
     if (empty($amount) || empty($description) || empty($category)) {
-        echo "<script>alert('Please fill in all required fields.');</script>";
+        echo "<script>alert('Please fill in all required fields.'); window.location.href = 'expense.php';</script>";
+    } elseif (!is_numeric($amount) || $amount <= 0) {
+        echo "<script>alert('Please enter a valid positive number for the amount.'); window.location.href = 'expense.php';</script>";
+    } elseif ($amount > 99999999) {
+        echo "<script>alert('Amount cannot exceed 99,999,999.'); window.location.href = 'expense.php';</script>";
     } else {
+        $amount = mysqli_real_escape_string($conn, $amount); // sanitize after validation
+
         $sql = "INSERT INTO p_expenses (user_id, amount, description, category, date) 
                 VALUES (?, ?, ?, ?, ?)";
         $stmt = mysqli_prepare($conn, $sql);
-        
+
         if ($stmt) {
             mysqli_stmt_bind_param($stmt, "idsss", $user_id, $amount, $description, $category, $date);
-            
+
             if (!mysqli_stmt_execute($stmt)) {
-               
-                echo "<script>alert('Error adding expense: " . mysqli_error($conn) . "');</script>";
+             
+                echo "<script>alert('Error adding expense: " . mysqli_error($conn) . "'); window.location.href = 'expense.php';</script>";
             }
             mysqli_stmt_close($stmt);
         } else {
-            echo "<script>alert('Error preparing statement: " . mysqli_error($conn) . "');</script>";
+            echo "<script>alert('Error preparing statement: " . mysqli_error($conn) . "'); window.location.href = 'expense.php';</script>";
         }
     }
 }
 
 
 
+
 // Handle monthly limit setting
 if (isset($_POST['set_limit'])) {
-    $limit_amount = $_POST['limit_amount'];
-    $month = date('n'); // Current month as number (1-12)
+    $limit_amount = trim($_POST['limit_amount']);
+    $month = date('n'); // Current month
     $year = date('Y');  // Current year
-    
-    // Check if limit already exists for this month/year
-    $check_sql = "SELECT * FROM monthly_limits WHERE user_id = ? AND month = ? AND year = ?";
-    $stmt = mysqli_prepare($conn, $check_sql);
-    mysqli_stmt_bind_param($stmt, 'iii', $user_id, $month, $year);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    
-    if (mysqli_num_rows($result) > 0) {
-        // Update existing limit
-        $update_sql = "UPDATE monthly_limits SET amount = ? WHERE user_id = ? AND month = ? AND year = ?";
-        $stmt = mysqli_prepare($conn, $update_sql);
-        mysqli_stmt_bind_param($stmt, 'diii', $limit_amount, $user_id, $month, $year);
+
+    // Validate input
+    if (empty($limit_amount)) {
+        echo "<script>alert('Please enter a monthly limit.'); window.location.href = 'expense.php';</script>";
+    } elseif (!is_numeric($limit_amount) || $limit_amount <= 0) {
+        echo "<script>alert('Please enter a valid positive number for the monthly limit.'); window.location.href = 'expense.php';</script>";
+    } elseif ($limit_amount > 99999999) {
+        echo "<script>alert('Monthly limit cannot exceed 99,999,999.'); window.location.href = 'expense.php';</script>";
     } else {
-        // Insert new limit
-        $insert_sql = "INSERT INTO monthly_limits (user_id, amount, month, year) VALUES (?, ?, ?, ?)";
-        $stmt = mysqli_prepare($conn, $insert_sql);
-        mysqli_stmt_bind_param($stmt, 'idii', $user_id, $limit_amount, $month, $year);
-    }
-    
-    if (mysqli_stmt_execute($stmt)) {
-        $limit_success = "Monthly limit updated successfully!";
-    } else {
-        $limit_error = "Error updating limit: " . mysqli_error($conn);
+        // Check if limit already exists
+        $check_sql = "SELECT * FROM monthly_limits WHERE user_id = ? AND month = ? AND year = ?";
+        $stmt = mysqli_prepare($conn, $check_sql);
+        mysqli_stmt_bind_param($stmt, 'iii', $user_id, $month, $year);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+
+        if (mysqli_num_rows($result) > 0) {
+            // Update existing limit
+            $update_sql = "UPDATE monthly_limits SET amount = ? WHERE user_id = ? AND month = ? AND year = ?";
+            $stmt = mysqli_prepare($conn, $update_sql);
+            mysqli_stmt_bind_param($stmt, 'diii', $limit_amount, $user_id, $month, $year);
+        } else {
+            // Insert new limit
+            $insert_sql = "INSERT INTO monthly_limits (user_id, amount, month, year) VALUES (?, ?, ?, ?)";
+            $stmt = mysqli_prepare($conn, $insert_sql);
+            mysqli_stmt_bind_param($stmt, 'idii', $user_id, $limit_amount, $month, $year);
+        }
+
+        if (!mysqli_stmt_execute($stmt)) {
+           
+            echo "<script>alert('Error updating limit: " . mysqli_error($conn) . "'); window.location.href = 'expense.php';</script>";
+        }
+        mysqli_stmt_close($stmt);
     }
 }
+
 
 // Get current month's limit
 $month = date('n');
